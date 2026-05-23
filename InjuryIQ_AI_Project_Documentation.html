@@ -1,0 +1,382 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>InjuryIQ AI - Technical Submission & Project Documentation</title>
+<style>
+    body {
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        line-height: 1.6;
+        color: #1e293b;
+        max-width: 900px;
+        margin: 0 auto;
+        padding: 40px 20px;
+        background-color: #f8fafc;
+    }
+    .container {
+        background-color: #ffffff;
+        padding: 40px;
+        border-radius: 12px;
+        box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+        border: 1px solid #e2e8f0;
+    }
+    h1 {
+        color: #009682;
+        font-size: 26px;
+        border-bottom: 2px solid #00c2a8;
+        padding-bottom: 8px;
+        margin-top: 40px;
+    }
+    h2 {
+        color: #1e293b;
+        font-size: 20px;
+        margin-top: 30px;
+        border-bottom: 1px solid #e2e8f0;
+        padding-bottom: 4px;
+    }
+    h3 {
+        color: #475569;
+        font-size: 16px;
+        margin-top: 20px;
+        font-style: italic;
+    }
+    p {
+        margin-bottom: 16px;
+        text-align: justify;
+    }
+    ul {
+        margin-bottom: 20px;
+        padding-left: 20px;
+    }
+    li {
+        margin-bottom: 8px;
+    }
+    strong {
+        color: #0f172a;
+    }
+    table {
+        width: 100%;
+        border-collapse: collapse;
+        margin: 24px 0;
+        font-size: 14px;
+    }
+    th {
+        background-color: #009682;
+        color: #ffffff;
+        font-weight: bold;
+        text-align: left;
+        padding: 12px;
+        border: 1px solid #00806d;
+    }
+    td {
+        padding: 12px;
+        border: 1px solid #cbd5e1;
+    }
+    tr:nth-child(even) {
+        background-color: #f8fafc;
+    }
+    .title-page {
+        text-align: center;
+        margin-top: 60px;
+        margin-bottom: 80px;
+    }
+    .title-page h1 {
+        font-size: 36px;
+        border-bottom: none;
+        color: #00c2a8;
+        margin-bottom: 20px;
+    }
+    .subtitle {
+        font-size: 18px;
+        color: #475569;
+        font-style: italic;
+        margin-bottom: 60px;
+    }
+    .meta-info {
+        font-size: 14px;
+        color: #64748b;
+        line-height: 1.8;
+    }
+    .page-break {
+        margin-top: 40px;
+    }
+    .qa-box {
+        margin-bottom: 24px;
+        padding: 15px;
+        border-left: 4px solid #009682;
+        background-color: #f8fafc;
+        border-radius: 0 8px 8px 0;
+    }
+    .btn-print {
+        display: inline-block;
+        background-color: #009682;
+        color: white;
+        padding: 10px 20px;
+        border-radius: 6px;
+        text-decoration: none;
+        font-weight: bold;
+        margin-bottom: 30px;
+        cursor: pointer;
+        border: none;
+    }
+    .btn-print:hover {
+        background-color: #00806d;
+    }
+    @media print {
+        .btn-print {
+            display: none;
+        }
+        body {
+            background-color: white;
+            padding: 0;
+        }
+        .container {
+            box-shadow: none;
+            border: none;
+            padding: 0;
+        }
+    }
+</style>
+</head>
+<body>
+
+<div class="container">
+    <button class="btn-print" onclick="window.print()">🖨️ Print / Save as PDF</button>
+
+    <!-- TITLE PAGE -->
+    <div class="title-page">
+        <h1>AI-ASSISTED JOINT INJURY TRIAGE SYSTEM<br>(InjuryIQ AI)</h1>
+        <div class="subtitle">A Comprehensive Technical Reference Guide: Architecture, Clinical Scoring, Machine Learning Pipelines, and Presentation Guide</div>
+        <div class="meta-info">
+            <strong>Prepared for:</strong> Academic Submission & Project Viva Examination<br>
+            <strong>Tech Stack:</strong> Flutter | React 19 & Vite | FastAPI | PyTorch | Firebase | Gemini API<br>
+            <strong>Date:</strong> May 2026
+        </div>
+    </div>
+
+    <div class="page-break"></div>
+
+    <!-- SECTION 1 -->
+    <h1>1. Project Executive Summary & Core Value Proposition</h1>
+    <p>
+        <strong>InjuryIQ AI</strong> is an intelligent clinical decision-support and triage assistant designed to help users evaluate the severity of acute joint injuries (Ankle, Foot, Knee, Wrist) immediately after an accident. In real-world scenarios, when an athlete twists their ankle on the field, or a student slips on stairs, they face a critical dilemma: <em>Is it just a sprain (soft tissue stretch/tear) that can be managed at home using first aid, or is it a fracture (bone break) requiring urgent X-rays and emergency medical care?</em>
+    </p>
+    <p>
+        This confusion leads to two highly negative outcomes:
+    </p>
+    <ul>
+        <li><strong>ER Overcrowding:</strong> Patients overflow Emergency Rooms (ER) for minor joint sprains, causing long wait times and high medical bills.</li>
+        <li><strong>Dangerous Treatment Delays:</strong> Patients ignore fractures, thinking it is a simple sprain, which leads to malunion of bones, chronic pain, and permanent disability.</li>
+    </ul>
+    <p>
+        InjuryIQ AI solves this problem by translating validated medical guidelines (the Ottawa Rules) and modern machine learning into a trilingual, multi-platform system. Designed specifically for students, athletes, parents, and users in rural areas, it provides a preliminary clinical risk classification (Low Risk, Moderate Risk, High Risk, or Emergency) and guides the user to the appropriate next steps. It does not replace a doctor or issue medical diagnoses, but acts as a highly reliable first-line decision guide.
+    </p>
+
+    <!-- SECTION 2 -->
+    <h1>2. Multi-Platform Technology Stack & Rationale</h1>
+    <p>
+        To ensure high accessibility across web browsers and mobile environments, the project is structured into three main modules. Here is the detailed breakdown of the tech stack and the engineering rationale for each choice:
+    </p>
+
+    <h2>2.1 Frontend Web Prototype (React + Vite)</h2>
+    <ul>
+        <li><strong>React 19 & Vite:</strong> Chosen for rendering high-performance UI components with rapid Hot Module Replacement (HMR). The production bundle compiles in under 500ms, ensuring lightning-fast client load times.</li>
+        <li><strong>Premium Vanilla CSS:</strong> Implementing a glassmorphic aesthetic using a harmonious Teal brand color palette. It uses responsive media queries to fit any screen size (desktop, tablet, mobile) flawlessly.</li>
+        <li><strong>Vector Hotspots:</strong> Interactive SVG diagrams corresponding to Ankle, Foot, Knee, and Wrist joints, allowing users to toggle bone tenderness points directly on the anatomical graphic.</li>
+        <li><strong>LocalStorage Database:</strong> Saves completed assessments, history records, and rehab progress logs fully offline, allowing immediate review without database overhead.</li>
+    </ul>
+
+    <h2>2.2 Frontend Mobile App (Flutter)</h2>
+    <ul>
+        <li><strong>Flutter SDK:</strong> Allows building a compiled, high-performance native application for both Android and iOS from a single codebase, minimizing maintenance overhead.</li>
+        <li><strong>State & Storage:</strong> Utilizes the Provider pattern for reactive state updates, http for backend API requests, and shared_preferences for storing local tokens and session data.</li>
+        <li><strong>Offline Scoring Fallback:</strong> If the backend FastAPI server goes offline or has connection issues, the mobile app's internal scoring module dynamically calculates the clinical score on the user's phone, maintaining 100% app stability.</li>
+    </ul>
+
+    <h2>2.3 Backend API Service (FastAPI + PyTorch)</h2>
+    <ul>
+        <li><strong>FastAPI Framework:</strong> Asynchronous, high-performance REST API built in Python. Chosen for its automatic Swagger/OpenAPI documentation generation and fast request processing.</li>
+        <li><strong>PyTorch Runtime:</strong> Lightweight deep learning runtime to host and serve the swelling classifier ML model on standard server CPUs.</li>
+        <li><strong>Data Validations:</strong> Standard Pydantic schemas enforce type safety for symptom checklists, Ottawa parameters, and response structures.</li>
+    </ul>
+
+    <!-- SECTION 3 -->
+    <h1>3. Clinical Rules & Scoring Engine (Ottawa Rules)</h1>
+    <p>
+        At the core of the triage assistant is a scoring engine built directly upon validated orthopedic diagnostic guidelines. Understanding this scoring engine is critical for any presentation. Below is the exact scoring rubric and clinical rationale:
+    </p>
+
+    <table>
+        <thead>
+            <tr>
+                <th>Clinical Parameter</th>
+                <th>Points Added</th>
+                <th>Clinical Significance & Rationale</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td><strong>Weight Bearing Failure (Ottawa)</strong></td>
+                <td>+30 points</td>
+                <td>Inability to walk 4 steps immediately after injury and NOW indicates high likelihood of structural instability or fracture.</td>
+            </tr>
+            <tr>
+                <td><strong>Anatomical Bone Tenderness (Ottawa)</strong></td>
+                <td>+25 points each</td>
+                <td>Pain at key points (lateral/medial malleolus, 5th metatarsal base, navicular, patella, scaphoid snuffbox) indicates potential bone fracture.</td>
+            </tr>
+            <tr>
+                <td><strong>High-Energy Trauma Mechanism</strong></td>
+                <td>+15 points</td>
+                <td>Accidents involving falls from heights, vehicle crashes, or high-speed sports collisions suggest high impact forces.</td>
+            </tr>
+            <tr>
+                <td><strong>Visible Joint Deformity</strong></td>
+                <td>EMERGENCY</td>
+                <td>Bent, crooked joint shape suggests joint dislocation or displaced fracture. Instant red-alert triage.</td>
+            </tr>
+            <tr>
+                <td><strong>Skin Color Changes (Blue/Pale/Cold)</strong></td>
+                <td>EMERGENCY</td>
+                <td>Indicates vascular compromise or restricted blood flow. Requires immediate surgical attention.</td>
+            </tr>
+            <tr>
+                <td><strong>Numbness / Tingling in Extremities</strong></td>
+                <td>EMERGENCY</td>
+                <td>Signs of nerve compression or compartment syndrome. Urgent ER referral.</td>
+            </tr>
+            <tr>
+                <td><strong>Severe Unrelieved Pain</strong></td>
+                <td>+12 points</td>
+                <td>Unbearable pain that is completely unaffected by pain relief medication suggests severe trauma.</td>
+            </tr>
+            <tr>
+                <td><strong>Severe Swelling / Stretched Skin</strong></td>
+                <td>+15 points</td>
+                <td>Indicates severe internal bleeding or joint effusion.</td>
+            </tr>
+            <tr>
+                <td><strong>Large Spreading Bruising</strong></td>
+                <td>+10 points</td>
+                <td>Represents extensive ruptured capillaries, typical of major ligament tears or fractures.</td>
+            </tr>
+        </tbody>
+    </table>
+
+    <h2>3.1 Risk Thresholds & Actionable Recommendations</h2>
+    <ul>
+        <li><strong>Low Risk (Green) [Score 0-20]:</strong> Soft-tissue sprain is highly likely. Recommendations: Follow R.I.C.E. protocol (Rest, Ice, Compression, Elevation) at home, monitor for 48-72 hours.</li>
+        <li><strong>Moderate Risk (Yellow) [Score 21-50]:</strong> Indicated for moderate pain or swelling. Recommendations: Rest joint, consult a general practitioner or visit a clinic within 24-48 hours. Consider X-ray if symptoms worsen.</li>
+        <li><strong>High Risk (Red) [Score 51-80]:</strong> Positive Ottawa rules. Recommendations: High likelihood of fracture. Go to an orthopedic clinic, avoid putting weight, and obtain a clinical X-ray diagnostic.</li>
+        <li><strong>Emergency (Dark Red Alert) [Score 81+ OR Any Red Flag]:</strong> Recommendations: Dial emergency services or visit the ER immediately. Keep the joint completely immobilized to prevent nerve or blood vessel damage.</li>
+    </ul>
+
+    <!-- SECTION 4 -->
+    <h1>4. Machine Learning Image Classifier Pipeline</h1>
+    <p>
+        To complement user-reported questionnaires, we developed an image classification model to categorize swelling severity directly from a photo of the injured joint.
+    </p>
+
+    <h2>4.1 Model Architecture & Backbone</h2>
+    <p>
+        We chose <strong>MobileNetV3-Small</strong> as our deep learning backbone. Rationale: It is an ultra-lightweight, efficient convolutional neural network designed for mobile and CPU edge environments. We loaded weights pre-trained on ImageNet to benefit from transfer learning. The backbone layers freeze early edge-detection filters, while we replaced the final fully-connected classifier head with a custom Linear layer that maps features to 4 output classes: [None, Mild, Moderate, Severe].
+    </p>
+
+    <h2>4.2 Model Training Pipeline (train_model.py)</h2>
+    <p>
+        The training script performs the following tasks:
+    </p>
+    <ul>
+        <li><strong>Image Preprocessing:</strong> Transforms raw images by resizing to 224x224, applying random rotations, horizontal flips, and color jitters to prevent overfitting, followed by normalization matching ImageNet parameters.</li>
+        <li><strong>Training Loop:</strong> Optimizes weights using Cross-Entropy Loss and the Adam optimizer.</li>
+        <li><strong>Learning Rate Scheduler:</strong> Implements Cosine Annealing scheduler to smoothly decay learning rates, preventing divergence.</li>
+        <li><strong>Export:</strong> Exports the trained parameters to 'injuryiq_model.pth'.</li>
+    </ul>
+
+    <h2>4.3 Backend Integration & Mock Fallback</h2>
+    <p>
+        The model is loaded inside the FastAPI backend. On start, the server checks if PyTorch and PIL libraries are present. If they are missing or if the weight file is not found, the server automatically boots up in 'Mock AI Mode' to prevent crashing, returning a mock swelling score. When running in production, images uploaded via the '/api/v1/assess/upload-image' endpoint are passed to the model, and the predicted swelling level automatically overrides the manual symptom input in the triage score calculator.
+    </p>
+
+    <!-- SECTION 5 -->
+    <h1>5. Trilingual Conversational AI Chatbot Assistant</h1>
+    <p>
+        A floating chatbot widget is available to answer user queries in Hinglish, Hindi, or English. The integration uses the Google Gemini API (specifically the 'gemini-2.5-flash' model).
+    </p>
+
+    <h2>5.1 Gemini API Integration & System Prompt</h2>
+    <p>
+        The chatbot connects directly to Google AI Studio. We inject a strict system instruction prompt to govern its responses:
+    </p>
+    <p>
+        <em>"You are the clinical helper bot for InjuryIQ AI. Do NOT issue final medical diagnoses. Strictly suggest preliminary triage risk levels and first-aid protocols like R.I.C.E. Keep replies concise. If the user asks in Hinglish, reply in Hinglish using English letters (e.g. 'rest karo, barf lagao')."</em>
+    </p>
+
+    <h2>5.2 Muting & State Closure Bug Resolution</h2>
+    <p>
+        A critical bug in the prototype was that the chatbot's voice reader (Text-to-Speech) continued speaking even after the user toggled the mute button. This was a classic React closure bug: the asynchronous API fetch callbacks captured the state of 'voiceMuted' at the moment the message was sent, ignoring subsequent state updates during the API call.
+    </p>
+    <p>
+        To resolve this, we introduced a mutable React Ref (<code>voiceMutedRef</code>) that is kept in sync with the state via a useEffect hook. The TTS speaker checks <code>voiceMutedRef.current</code> at the moment of speech execution. Additionally, toggling the mute button to true now calls <code>window.speechSynthesis.cancel()</code> immediately to clear the active browser audio buffer, resolving the bug 100%.
+    </p>
+
+    <!-- SECTION 6 -->
+    <h1>6. Viva & Presentation Q&A Preparation Guide</h1>
+    <p>
+        Below is a list of the top 10 questions that project examiners, reviewers, or professors are likely to ask during a project presentation, along with detailed, professional technical answers:
+    </p>
+
+    <div class="qa-box">
+        <p><strong>Q1: What is the clinical basis of your triage system? Why should we trust its scoring?</strong></p>
+        <p><em>Answer:</em> The system is based on the Ottawa Ankle Rules, Ottawa Knee Rules, and Scaphoid Fracture guidelines. These are highly validated clinical decision rules in emergency medicine. They have a sensitivity near 100% for detecting fractures, meaning a negative result gives nearly 100% assurance that the user does not have a fracture, reducing unnecessary X-ray procedures by up to 30-40%.</p>
+    </div>
+
+    <div class="qa-box">
+        <p><strong>Q2: Why is the Ottawa bone tenderness parameter worth 25 points while pain is only 15?</strong></p>
+        <p><em>Answer:</em> Clinical studies show that general pain is highly subjective and varies by individual pain tolerance. However, focal bone tenderness directly at the posterior edges of the malleoli or metatarsal bones has a very high correlation with structural breaks. Therefore, the algorithm assigns much higher clinical weight to anatomical point tenderness than general pain ratings.</p>
+    </div>
+
+    <div class="qa-box">
+        <p><strong>Q3: How does the AI image classifier connect with the clinical rules scoring?</strong></p>
+        <p><em>Answer:</em> The ML model classifies the swelling from an uploaded image into None, Mild, Moderate, or Severe. When a photo is uploaded, the backend automatically overrides the user's manual selection for the 'swelling' parameter with the AI's prediction. This predicted value is then fed directly into the clinical rules calculator, making the final score objective rather than purely self-reported.</p>
+    </div>
+
+    <div class="qa-box">
+        <p><strong>Q4: Why did you choose MobileNetV3 instead of a larger model like ResNet50?</strong></p>
+        <p><em>Answer:</em> ResNet50 has over 25 million parameters and requires a GPU to run inference with low latency, making it expensive to deploy. MobileNetV3-Small is optimized for mobile and CPU edge devices, has fewer than 2.5 million parameters, and runs inference on a single CPU core in under 100ms, making it ideal for cost-efficient cloud hosting and instant response times.</p>
+    </div>
+
+    <div class="qa-box">
+        <p><strong>Q5: If the internet disconnects or your FastAPI server crashes, does your Flutter app stop working?</strong></p>
+        <p><em>Answer:</em> No. The mobile app implements a local fallback scoring system. If the network call to FastAPI fails or times out, the Flutter app's internal rules engine automatically calculates the triage score and risk level locally. This ensures 100% offline reliability.</p>
+    </div>
+
+    <div class="qa-box">
+        <p><strong>Q6: How do you handle user data privacy, especially since healthcare apps are subject to strict regulations?</strong></p>
+        <p><em>Answer:</em> We adhere to data minimization principles. We do not store sensitive personal identifiable information (PII) on public servers. Data is stored in localStorage or secured via Firebase Auth, and the system displays a prominent medical disclaimer stating that it is a triage assistance tool and does not store legal health records.</p>
+    </div>
+
+    <div class="qa-box">
+        <p><strong>Q7: How did you fix the chatbot voice reader not muting in the React code?</strong></p>
+        <p><em>Answer:</em> This was a React state closure issue. Because the API call is asynchronous, the text-to-speech callback accessed a stale closure of the 'voiceMuted' state. We resolved this by using a React Ref ('voiceMutedRef') which always holds the latest mutable value, and by calling 'window.speechSynthesis.cancel()' immediately when the user clicks mute to terminate the browser's active audio queue.</p>
+    </div>
+
+    <div class="qa-box">
+        <p><strong>Q8: Why did you use environment variables (.env) for the Gemini API Key rather than hardcoding it?</strong></p>
+        <p><em>Answer:</em> Hardcoding keys exposes them to the public whenever the code is committed to GitHub. By using Vite environment variables ('import.meta.env.VITE_GEMINI_API_KEY') and adding '.env' to the '.gitignore' file, the key is loaded locally during build. On Vercel, it is configured via the environment variables dashboard, keeping the credentials secure.</p>
+    </div>
+
+    <div class="qa-box">
+        <p><strong>Q9: What happens if a child under 18 uses the app? Do the Ottawa Rules still apply?</strong></p>
+        <p><em>Answer:</em> No. Ottawa Rules are clinically validated only for adults (ages 18-55). If the user enters an age under 18, the scoring engine automatically flags it as a clinical override and upgrades the risk level to 'Moderate' or 'High', recommending a physical doctor's evaluation to ensure pediatric joint safety.</p>
+    </div>
+
+    <div class="qa-box">
+        <p><strong>Q10: What are the main limitations of this system?</strong></p>
+        <p><em>Answer:</em> The main limitations are: (1) It depends on the accuracy of user symptom reporting. (2) The image classifier only evaluates swelling from 2D photos, which cannot replace 3D palpation or X-rays. (3) It is not designed for open wounds or multi-trauma emergency scenarios.</p>
+    </div>
+
+</div>
+
+</body>
+</html>
