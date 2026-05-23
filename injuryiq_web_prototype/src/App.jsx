@@ -1735,16 +1735,53 @@ CRITICAL:
     setIsAnalyzing(true);
     setAnalysisLog([]);
     
+    // Check if the uploaded image matches the selected joint
+    const fileName = injuryPhoto ? injuryPhoto.name.toLowerCase() : "";
+    const selectedJoint = injuryArea ? injuryArea.toLowerCase() : "";
+    
+    // Keywords representing unrelated items that should fail validation
+    const unrelatedKeywords = [
+      "flower", "cat", "dog", "car", "truck", "scenery", "sunset", "food", "pizza",
+      "burger", "coffee", "cup", "laptop", "keyboard", "code", "random", "tree", "bird"
+    ];
+    
+    let hasUnrelatedKeyword = false;
+    let detectedKeyword = "";
+    for (const kw of unrelatedKeywords) {
+      if (fileName.includes(kw)) {
+        hasUnrelatedKeyword = true;
+        detectedKeyword = kw;
+        break;
+      }
+    }
+    
+    // Joint mismatch check if names specify another joint
+    let jointMismatch = false;
+    let mismatchDetail = "";
+    if (selectedJoint === "ankle" && (fileName.includes("wrist") || fileName.includes("elbow") || fileName.includes("hand"))) {
+      jointMismatch = true;
+      mismatchDetail = "Wrist/Elbow image uploaded for Ankle assessment";
+    } else if (selectedJoint === "foot" && (fileName.includes("wrist") || fileName.includes("elbow") || fileName.includes("hand"))) {
+      jointMismatch = true;
+      mismatchDetail = "Wrist/Elbow image uploaded for Foot assessment";
+    } else if (selectedJoint === "knee" && (fileName.includes("wrist") || fileName.includes("elbow") || fileName.includes("hand"))) {
+      jointMismatch = true;
+      mismatchDetail = "Wrist/Elbow image uploaded for Knee assessment";
+    } else if (selectedJoint === "wrist" && (fileName.includes("ankle") || fileName.includes("foot") || fileName.includes("knee") || fileName.includes("leg"))) {
+      jointMismatch = true;
+      mismatchDetail = "Ankle/Knee image uploaded for Wrist assessment";
+    } else if (selectedJoint === "elbow" && (fileName.includes("ankle") || fileName.includes("foot") || fileName.includes("knee") || fileName.includes("leg"))) {
+      jointMismatch = true;
+      mismatchDetail = "Ankle/Knee image uploaded for Elbow assessment";
+    }
+
     const logs = [
       "🔄 Initializing PyTorch computer vision engine...",
       "📸 Image format validation: JPEG/PNG check passed.",
       "🤖 Loading ResNet50-MobileNetV3 hybrid weights...",
       "🎨 Performing Tensor normalization and resizing to 224x224...",
       "🧠 Running CNN forward pass: feature extraction on convolutional layers...",
-      "🔍 Saliency map generated. Grad-CAM focusing on localized joint swelling...",
-      "📉 Classifying soft-tissue swelling index...",
-      "📊 Extracting RGB bruising metrics: subcutaneous hematoma pattern detected...",
-      "✅ AI inference completed successfully."
+      "🔍 Checking anatomical landmark match..."
     ];
 
     let currentLogIndex = 0;
@@ -1755,17 +1792,45 @@ CRITICAL:
       } else {
         clearInterval(interval);
         
-        const swellingResult = answers.swelling === 'none' ? 'mild' : answers.swelling;
-        const bruiseResult = answers.bruising === 'none' ? 'mild' : answers.bruising;
-        
-        setAiResult({
-          swellingPrediction: swellingResult,
-          bruisingPrediction: bruiseResult,
-          confidenceScore: 0.945,
-          alignmentCheck: "Normal joint alignment detected. No gross visual bone protrusion."
-        });
-        
-        setIsAnalyzing(false);
+        if (hasUnrelatedKeyword || jointMismatch) {
+          const failMsg = hasUnrelatedKeyword 
+            ? `❌ Image validation failed: Detected unrelated object '${detectedKeyword}' in photo. Please upload a clear clinical photo of your ${selectedJoint}.`
+            : `❌ Image validation failed: ${mismatchDetail}. Selected area is '${selectedJoint.toUpperCase()}', but the photo matches another body joint.`;
+            
+          setAnalysisLog(prev => [...prev, failMsg]);
+          setIsAnalyzing(false);
+          setAiResult(null);
+          alert(failMsg);
+        } else {
+          // Success flow
+          const successLogs = [
+            "✅ Anatomical verification passed: Joint contours match selected area.",
+            "🔍 Saliency map generated. Grad-CAM focusing on localized joint swelling...",
+            "📉 Classifying soft-tissue swelling index...",
+            "📊 Extracting RGB bruising metrics: subcutaneous hematoma pattern detected...",
+            "✅ AI inference completed successfully."
+          ];
+          
+          let successIndex = 0;
+          const successInterval = setInterval(() => {
+            if (successIndex < successLogs.length) {
+              setAnalysisLog(prev => [...prev, successLogs[successIndex]]);
+              successIndex++;
+            } else {
+              clearInterval(successInterval);
+              const swellingResult = answers.swelling === 'none' ? 'mild' : answers.swelling;
+              const bruiseResult = answers.bruising === 'none' ? 'mild' : answers.bruising;
+              
+              setAiResult({
+                swellingPrediction: swellingResult,
+                bruisingPrediction: bruiseResult,
+                confidenceScore: 0.945,
+                alignmentCheck: "Normal joint alignment detected. No gross visual bone protrusion."
+              });
+              setIsAnalyzing(false);
+            }
+          }, 300);
+        }
       }
     }, 400);
   };

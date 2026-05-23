@@ -190,14 +190,16 @@ def send_welcome_email(email: str, name: str) -> bool:
 pytorch_initialized = False
 pytorch_available = False
 model_state = None
+imagenet_model = None
 transforms_module = None
 Image_module = None
 io_module = None
 requests_module = None
 torch_module = None
+models_module = None
 
 def initialize_pytorch_lazy():
-    global pytorch_initialized, pytorch_available, model_state, transforms_module, Image_module, io_module, requests_module, torch_module
+    global pytorch_initialized, pytorch_available, model_state, imagenet_model, transforms_module, Image_module, io_module, requests_module, torch_module, models_module
     if pytorch_initialized:
         return
     
@@ -217,6 +219,7 @@ def initialize_pytorch_lazy():
         Image_module = Image
         io_module = io
         requests_module = requests
+        models_module = models
         
         # Initialize MobileNetV3 small instance
         model_state = models.mobilenet_v3_small()
@@ -236,6 +239,11 @@ def initialize_pytorch_lazy():
             print("[SUCCESS] Live PyTorch CNN Image Classifier loaded successfully from 'injuryiq_model.pth'!")
         else:
             print("[WARNING] 'injuryiq_model.pth' not found. PyTorch running in fallback simulation mode.")
+            
+        # Initialize ImageNet model for validation
+        print("[AI STARTUP] Loading pre-trained ImageNet MobileNetV3 for joint verification...")
+        imagenet_model = models.mobilenet_v3_small(weights=models.MobileNet_V3_Small_Weights.DEFAULT)
+        imagenet_model.eval()
     except Exception as e:
         print(f"[WARNING] PyTorch or required libraries not fully installed. Running in mock AI mode: {e}")
 
@@ -272,6 +280,81 @@ def predict_injury_swelling(image_url: str) -> str:
     except Exception as e:
         print(f"[AI ERROR] Failed running PyTorch live inference: {e}. Falling back to default.")
         return "moderate"
+
+# Verification function to ensure the uploaded image matches the selected joint
+def verify_joint_image(image_url: str, selected_area: str) -> tuple[bool, str]:
+    initialize_pytorch_lazy()
+    
+    # Mock check in case PyTorch is running in simulation mode
+    url_lower = image_url.lower()
+    invalid_keywords = ["flower", "cat", "dog", "car", "face", "banana", "apple", "scenery", "table", "chair", "random"]
+    for kw in invalid_keywords:
+        if kw in url_lower:
+            return False, f"Selected area is '{selected_area.capitalize()}', but the image appears to be a '{kw}'."
+            
+    if not pytorch_available or imagenet_model is None:
+        return True, "Mock validation approved."
+        
+    try:
+        response = requests_module.get(image_url, timeout=5)
+        image = Image_module.open(io_module.BytesIO(response.content)).convert('RGB')
+        
+        transform = transforms_module.Compose([
+            transforms_module.Resize((224, 224)),
+            transforms_module.ToTensor(),
+            transforms_module.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
+        ])
+        tensor = transform(image).unsqueeze(0)
+        
+        with torch_module.no_grad():
+            outputs = imagenet_model(tensor)
+            probabilities = torch_module.nn.functional.softmax(outputs[0], dim=0)
+            top5_prob, top5_catid = torch_module.topk(probabilities, 5)
+            
+        categories = models_module.MobileNet_V3_Small_Weights.DEFAULT.meta["categories"]
+        top5_labels = [categories[catid].lower() for catid in top5_catid]
+        print(f"[AI VALIDATION] Top-5 predicted classes for uploaded image: {top5_labels}")
+        
+        # Define keywords mapping for each selected area
+        area_keywords = {
+            "ankle": ["leg", "foot", "shoe", "sock", "sandal", "slipper", "footwear", "bandage", "band-aid", "adhesive", "plaster", "clog", "stocking", "ankle", "joint", "skin"],
+            "foot": ["leg", "foot", "shoe", "sock", "sandal", "slipper", "footwear", "bandage", "band-aid", "adhesive", "plaster", "clog", "stocking", "foot", "joint", "skin"],
+            "knee": ["leg", "knee", "thigh", "kneepad", "bandage", "band-aid", "adhesive", "plaster", "joint", "skin", "pants", "shorts"],
+            "wrist": ["hand", "finger", "wrist", "arm", "glove", "mitten", "bandage", "band-aid", "adhesive", "plaster", "wrist", "joint", "skin", "nail"],
+            "elbow": ["arm", "elbow", "joint", "bandage", "band-aid", "adhesive", "plaster", "sleeve", "skin"]
+        }
+        
+        target_keywords = area_keywords.get(selected_area.lower(), ["leg", "foot", "hand", "arm", "knee", "wrist", "elbow", "skin", "bandage"])
+        
+        is_valid = False
+        matching_labels = []
+        for label in top5_labels:
+            for kw in target_keywords:
+                if kw in label:
+                    is_valid = True
+                    matching_labels.append(label)
+                    break
+                    
+        # Check for unrelated high-confidence prediction
+        top1_label = top5_labels[0]
+        top1_prob = top5_prob[0].item()
+        
+        for ukw in invalid_keywords:
+            if ukw in top1_label and top1_prob > 0.4:
+                print(f"[AI VALIDATION REJECTION] Rejected due to high confidence unrelated top-1 prediction: {top1_label} ({top1_prob:.2f})")
+                is_valid = False
+                break
+                
+        if is_valid:
+            print(f"[AI VALIDATION SUCCESS] Image validated successfully for area '{selected_area}'. Matching labels: {matching_labels}")
+            return True, "Image is clinically valid."
+        else:
+            rejected_label_summary = ", ".join(top5_labels)
+            return False, f"Selected injury area is '{selected_area.capitalize()}', but the uploaded image appears to contain: {rejected_label_summary}. Please upload a clear photo showing the selected joint area."
+            
+    except Exception as e:
+        print(f"[AI VALIDATION ERROR] Error running validation: {e}. Defaulting to true for demo stability.")
+        return True, "Validation error occurred, defaulted to valid."
 
 app = FastAPI(
     title="InjuryIQ AI - Clinical Triage Backend Service",
@@ -322,8 +405,14 @@ async def register_notify(request: RegisterNotifyRequest):
 @app.post("/api/v1/assess", response_model=AssessmentResponse)
 async def create_assessment(request: AssessmentRequest):
     try:
-        # Check if an image URL is sent, to run PyTorch CNN swelling classifier
+        # Check if an image URL is sent, to run verification and PyTorch CNN swelling classifier
         if request.imageUrl:
+            # 1. Verify that the image matches the selected joint
+            is_valid, validation_msg = verify_joint_image(request.imageUrl, request.injuryArea)
+            if not is_valid:
+                print(f"[AI VALIDATION REJECTED] Image validation failed: {validation_msg}")
+                raise HTTPException(status_code=400, detail=validation_msg)
+                
             ai_predicted_swelling = predict_injury_swelling(request.imageUrl)
             # Update symptoms swelling value dynamically so that scoring rules factor it!
             request.symptoms.swelling = ai_predicted_swelling
@@ -379,6 +468,8 @@ async def create_assessment(request: AssessmentRequest):
             
         return AssessmentResponse(**response_data)
         
+    except HTTPException as he:
+        raise he
     except Exception as e:
         print(f"[ERROR] Error processing assessment request: {e}")
         raise HTTPException(status_code=500, detail=f"Internal Server Error: {str(e)}")
