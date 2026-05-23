@@ -1,0 +1,52 @@
+# InjuryIQ AI - Core Workspace GitIgnore
+
+# 1. Python Backend Environments & Caches
+injuryiq_backend/venv/
+injuryiq_backend/__pycache__/
+injuryiq_backend/*.pyc
+injuryiq_backend/*.log
+injuryiq_backend/.env
+injuryiq_backend/serviceAccountKey.json
+injuryiq_backend/injuryiq_model.pth
+injuryiq_backend/mock_img_*.jpg
+
+# 2. React Web Prototype Node Modules & Builds
+injuryiq_web_prototype/node_modules/
+injuryiq_web_prototype/dist/
+injuryiq_web_prototype/.vite/
+injuryiq_web_prototype/*.log
+injuryiq_web_prototype/local_api_key.json
+
+# 3. Flutter Mobile Client temporary builds
+injuryiq_mobile/.dart_tool/
+injuryiq_mobile/.flutter-plugins
+injuryiq_mobile/.flutter-plugins-dependencies
+injuryiq_mobile/.pub-cache/
+injuryiq_mobile/build/
+injuryiq_mobile/*.apk
+injuryiq_mobile/*.ipa
+
+# 4. OS Temporary files & Local Cache directories
+.DS_Store
+Thumbs.db
+D:/temp/
+D:/pip_cache/
+D:\temp/
+D:\pip_cache/
+temp/
+pip_cache/
+
+# 5. Env files
+injuryiq_web_prototype/.env
+injuryiq_web_prototype/.env.*
+.env
+.env.*
+
+# 6. Temp local logs
+*_log.txt
+*.log
+whoami*.txt
+list_output.txt
+task_*_out.txt
+deploy_output.txt
+vercel_deploy_output.txt
