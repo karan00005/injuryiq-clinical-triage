@@ -302,21 +302,27 @@ def check_skin_tone_percentage(image_data) -> float:
 def verify_joint_image(image_url: str, selected_area: str) -> tuple[bool, str]:
     initialize_pytorch_lazy()
     
-    # Mock check in case PyTorch is running in simulation mode
-    url_lower = image_url.lower()
-    invalid_keywords = ["flower", "cat", "dog", "car", "face", "banana", "apple", "scenery", "table", "chair", "random"]
-    for kw in invalid_keywords:
-        if kw in url_lower:
-            return False, f"Selected area is '{selected_area.capitalize()}', but the image appears to be a '{kw}'."
-            
-    # Explicit joint mismatch keywords check for mock checks
-    selected_area_lower = selected_area.lower()
-    if selected_area_lower == "knee" and any(k in url_lower for k in ["foot", "feet", "shoe", "sock", "sandal", "slipper", "clog", "boot", "toe", "toes", "hand", "finger", "glove", "mitten", "wrist", "elbow", "arm"]):
-        return False, f"Selected area is 'Knee', but the image contains lower limb/extremity details (foot/hand/shoe)."
-    elif selected_area_lower in ["ankle", "foot"] and any(k in url_lower for k in ["hand", "finger", "glove", "mitten", "wrist", "elbow", "arm", "knee", "thigh"]):
-        return False, f"Selected area is '{selected_area.capitalize()}', but the image appears to contain upper limb or knee details."
-    elif selected_area_lower in ["wrist", "elbow"] and any(k in url_lower for k in ["foot", "feet", "shoe", "sock", "sandal", "slipper", "clog", "boot", "toe", "toes", "knee", "thigh", "kneepad", "leg"]):
-        return False, f"Selected area is '{selected_area.capitalize()}', but the image appears to contain lower body details."
+    # Extract alphanumeric tokens from the filename to prevent substring collisions (like 'carpal' matching 'car')
+    # If it is a data URI, there is no filename. Skip keyword checking to avoid matching patterns in base64 string.
+    tokens = []
+    if not image_url.startswith("data:image"):
+        import re
+        filename = image_url.split('/')[-1].split('?')[0].lower()
+        tokens = re.split(r'[^a-z0-9]+', filename)
+        
+        invalid_keywords = ["flower", "cat", "dog", "car", "face", "banana", "apple", "scenery", "table", "chair", "random"]
+        for kw in invalid_keywords:
+            if kw in tokens:
+                return False, f"Selected area is '{selected_area.capitalize()}', but the image appears to be a '{kw}'."
+                
+        # Explicit joint mismatch keywords check for mock checks
+        selected_area_lower = selected_area.lower()
+        if selected_area_lower == "knee" and any(k in tokens for k in ["foot", "feet", "shoe", "sock", "sandal", "slipper", "clog", "boot", "toe", "toes", "hand", "finger", "glove", "mitten", "wrist", "elbow", "arm"]):
+            return False, f"Selected area is 'Knee', but the image contains lower limb/extremity details (foot/hand/shoe)."
+        elif selected_area_lower in ["ankle", "foot"] and any(k in tokens for k in ["hand", "finger", "glove", "mitten", "wrist", "elbow", "arm", "knee", "thigh"]):
+            return False, f"Selected area is '{selected_area.capitalize()}', but the image appears to contain upper limb or knee details."
+        elif selected_area_lower in ["wrist", "elbow"] and any(k in tokens for k in ["foot", "feet", "shoe", "sock", "sandal", "slipper", "clog", "boot", "toe", "toes", "knee", "thigh", "kneepad", "leg"]):
+            return False, f"Selected area is '{selected_area.capitalize()}', but the image appears to contain lower body details."
 
     # Load PIL Image from base64, remote URL, or local file path
     pil_img = None

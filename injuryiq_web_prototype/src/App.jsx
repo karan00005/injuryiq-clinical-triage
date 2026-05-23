@@ -1894,6 +1894,9 @@ Return your response strictly in the following JSON format:
             geminiResult = await geminiPromise;
           }
           
+          // Extract exact alphanumeric tokens from filename to prevent substring checks
+          const tokens = fileName.split(/[^a-z0-9]+/);
+          
           // Keywords representing unrelated items that should fail validation
           const unrelatedKeywords = [
             "flower", "cat", "dog", "car", "truck", "scenery", "sunset", "food", "pizza",
@@ -1903,7 +1906,7 @@ Return your response strictly in the following JSON format:
           let hasUnrelatedKeyword = false;
           let detectedKeyword = "";
           for (const kw of unrelatedKeywords) {
-            if (fileName.includes(kw)) {
+            if (tokens.includes(kw)) {
               hasUnrelatedKeyword = true;
               detectedKeyword = kw;
               break;
@@ -1913,19 +1916,19 @@ Return your response strictly in the following JSON format:
           // Joint mismatch check if names specify another joint
           let jointMismatch = false;
           let mismatchDetail = "";
-          if (selectedJoint === "ankle" && (fileName.includes("wrist") || fileName.includes("elbow") || fileName.includes("hand") || fileName.includes("finger") || fileName.includes("arm") || fileName.includes("knee") || fileName.includes("thigh"))) {
+          if (selectedJoint === "ankle" && tokens.some(t => ["wrist", "elbow", "hand", "finger", "arm", "knee", "thigh"].includes(t))) {
             jointMismatch = true;
             mismatchDetail = "Wrist/Elbow/Knee image uploaded for Ankle assessment";
-          } else if (selectedJoint === "foot" && (fileName.includes("wrist") || fileName.includes("elbow") || fileName.includes("hand") || fileName.includes("finger") || fileName.includes("arm") || fileName.includes("knee") || fileName.includes("thigh"))) {
+          } else if (selectedJoint === "foot" && tokens.some(t => ["wrist", "elbow", "hand", "finger", "arm", "knee", "thigh"].includes(t))) {
             jointMismatch = true;
             mismatchDetail = "Wrist/Elbow/Knee image uploaded for Foot assessment";
-          } else if (selectedJoint === "knee" && (fileName.includes("wrist") || fileName.includes("elbow") || fileName.includes("hand") || fileName.includes("finger") || fileName.includes("arm") || fileName.includes("foot") || fileName.includes("feet") || fileName.includes("shoe") || fileName.includes("toe") || fileName.includes("ankle") || fileName.includes("heel"))) {
+          } else if (selectedJoint === "knee" && tokens.some(t => ["wrist", "elbow", "hand", "finger", "arm", "foot", "feet", "shoe", "toe", "ankle", "heel"].includes(t))) {
             jointMismatch = true;
             mismatchDetail = "Foot/Ankle/Hand image uploaded for Knee assessment";
-          } else if (selectedJoint === "wrist" && (fileName.includes("ankle") || fileName.includes("foot") || fileName.includes("feet") || fileName.includes("knee") || fileName.includes("leg") || fileName.includes("elbow") || fileName.includes("shoe") || fileName.includes("toe"))) {
+          } else if (selectedJoint === "wrist" && tokens.some(t => ["ankle", "foot", "feet", "knee", "leg", "elbow", "shoe", "toe"].includes(t))) {
             jointMismatch = true;
             mismatchDetail = "Ankle/Knee/Foot image uploaded for Wrist assessment";
-          } else if (selectedJoint === "elbow" && (fileName.includes("ankle") || fileName.includes("foot") || fileName.includes("feet") || fileName.includes("knee") || fileName.includes("leg") || fileName.includes("wrist") || fileName.includes("hand") || fileName.includes("shoe") || fileName.includes("toe"))) {
+          } else if (selectedJoint === "elbow" && tokens.some(t => ["ankle", "foot", "feet", "knee", "leg", "wrist", "hand", "shoe", "toe"].includes(t))) {
             jointMismatch = true;
             mismatchDetail = "Ankle/Knee/Foot/Wrist image uploaded for Elbow assessment";
           }
