@@ -88,6 +88,25 @@ def test_image_validation():
     assert response.status_code == 400
     print("[PASS] Test 4 Passed! Endpoint successfully rejected invalid joint image.")
 
+    # Test 5: verify_joint_image mock check - Knee selection with Feet image
+    print("\n--- TEST 5: verify_joint_image mock check - Knee selection with Feet image ---")
+    is_valid, msg = verify_joint_image("http://example.com/my_injured_feet.jpg", "knee")
+    print(f"Is Valid: {is_valid}")
+    print(f"Message: {msg}")
+    assert not is_valid
+    print("[PASS] Test 5 Passed! Knee selection with Feet image rejected successfully.")
+
+    # Test 6: base64 data URI representing a non-skin/non-body-part image (low skin tone percentage)
+    print("\n--- TEST 6: verify_joint_image check with base64 encoded non-skin image ---")
+    # 1x1 black PNG pixel
+    base64_non_skin = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScxoW8AAAAASUVORK5CYII="
+    is_valid, msg = verify_joint_image(base64_non_skin, "ankle")
+    print(f"Is Valid: {is_valid}")
+    print(f"Message: {msg}")
+    assert not is_valid
+    assert "does not appear to contain a close-up of a human joint" in msg
+    print("[PASS] Test 6 Passed! Non-skin base64 image successfully rejected.")
+
 if __name__ == "__main__":
     try:
         test_image_validation()
