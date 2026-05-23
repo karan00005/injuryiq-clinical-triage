@@ -78,3 +78,17 @@ class RegisterNotifyResponse(BaseModel):
     success: bool
     message: str
     domain_verified: bool
+
+class UserRegisterRequest(BaseModel):
+    email: str
+    password: str
+    name: str
+
+class UserLoginRequest(BaseModel):
+    email: str
+    password: str
+
+class AuthResponse(BaseModel):
+    success: bool
+    message: str
+    user: Optional[dict] = None

@@ -606,6 +606,108 @@ function SosDialog({ lang, onClose }) {
   );
 }
 
+// --- SIMPLIFIED MULTILINGUAL TENDERNESS TEXT HELPER ---
+const getTendernessText = (key, currentLang) => {
+  const data = {
+    ankle: {
+      header: {
+        en: "Ankle Injury Assessment (Ottawa Rules Check):",
+        hi: "टखने की जांच (ओटावा नियम):",
+        hn: "Takhne ki jaanch (Ottawa Rules Check):"
+      },
+      lateralMalleolus: {
+        en: "Pain when pressing the outer ankle bone (Bahar wali takhne ki haddi ko dabane par dard)",
+        hi: "टखने के बाहर की उभरी हुई हड्डी को दबाने या छूने पर दर्द (Outer ankle bone pain)",
+        hn: "Ankle ke bahar wali ubhri haddi (lateral malleolus) ko dabane par dard"
+      },
+      medialMalleolus: {
+        en: "Pain when pressing the inner ankle bone (Andar wali takhne ki haddi ko dabane par dard)",
+        hi: "टखने के अंदर की उभरी हुई हड्डी को दबाने या छूने पर दर्द (Inner ankle bone pain)",
+        hn: "Ankle ke andar wali ubhri haddi (medial malleolus) ko dabane par dard"
+      },
+      walkImmediately: {
+        en: "Unable to walk 4 steps immediately after the injury (Chot lagte hi 4 kadam chalne me as-samarth)",
+        hi: "क्या आप चोट लगने के तुरंत बाद 4 कदम भी चलने में असमर्थ थे?",
+        hn: "Chot lagte hi turant 4 steps chalne me as-samarth the (Unable to walk 4 steps)"
+      },
+      walkNow: {
+        en: "Unable to walk 4 steps right now without any support (Abhi 4 kadam chalne me as-samarth)",
+        hi: "क्या आप अभी (बिना किसी सहारे के) 4 कदम चलने में असमर्थ हैं?",
+        hn: "Abhi bina kisi support ke 4 steps chalne me as-samarth hain (Unable to walk 4 steps now)"
+      }
+    },
+    foot: {
+      header: {
+        en: "Foot Injury Assessment (Ottawa Rules Check):",
+        hi: "पैर की जांच (ओटावा नियम):",
+        hn: "Pair ki jaanch (Ottawa Rules Check):"
+      },
+      fifthMetatarsal: {
+        en: "Pain when pressing the outer edge of the foot, halfway down (Pair ke bahari kinare ke beech me dard)",
+        hi: "पैर के बाहरी किनारे के बीच में (छोटी उंगली की तरफ की हड्डी) छूने या दबाने पर दर्द",
+        hn: "Pair ke bahari edge ke beech me (choti finger ki side wali haddi) dabane par dard"
+      },
+      navicular: {
+        en: "Pain when pressing the inner middle side/arch of the foot (Pair ke andar wale beech ke hisse me dard)",
+        hi: "पैर के अंदरूनी बीच के हिस्से की हड्डी (Navicular) को छूने या दबाने पर दर्द",
+        hn: "Pair ke andar wale beech ke hisse (Navicular bone) ko dabane par dard"
+      },
+      walkImmediately: {
+        en: "Unable to walk 4 steps immediately after the injury (Chot lagte hi 4 kadam chalne me as-samarth)",
+        hi: "क्या आप चोट लगने के तुरंत बाद 4 कदम भी चलने में असमर्थ थे?",
+        hn: "Chot lagte hi turant 4 steps chalne me as-samarth the (Unable to walk 4 steps)"
+      }
+    },
+    knee: {
+      header: {
+        en: "Knee Injury Assessment (Ottawa Rules Check):",
+        hi: "घुटने की जांच (ओटावा नियम):",
+        hn: "Ghutne ki jaanch (Ottawa Rules Check):"
+      },
+      patellar: {
+        en: "Pain when pressing the kneecap (Katori/Patella) directly (Ghutne ki katori dabane par dard)",
+        hi: "घुटने की कटोरी या चक्की (Patella) को दबाने पर दर्द",
+        hn: "Ghutne ki katori/chakkli (Patella) ko dabane par dard"
+      },
+      fibularHead: {
+        en: "Pain when pressing the small outer bone slightly below the joint (Ghutne ke bahar thoda niche wali haddi par dard)",
+        hi: "घुटने के बाहर की तरफ थोड़ा नीचे वाली उभरी हुई हड्डी (Fibular Head) को दबाने पर दर्द",
+        hn: "Ghutne ke bahar ki taraf thoda niche wali haddi (Fibular Head) ko dabane par dard"
+      },
+      flexion90: {
+        en: "Unable to bend the knee to 90 degrees, like sitting on a chair (Ghutne ko chair position jitna modne me as-samarth)",
+        hi: "घुटने को 90 डिग्री (जैसे कुर्सी पर बैठते हैं) तक मोड़ने में असमर्थ",
+        hn: "Ghutne ko 90 degree (jaise chair par baithte hain) modne me as-samarth hain"
+      }
+    },
+    wrist: {
+      header: {
+        en: "Wrist/Hand Assessment (Bone Pain Check):",
+        hi: "कलाई की जांच (हड्डी का दर्द):",
+        hn: "Wrist ki jaanch (Haddi ka dard):"
+      },
+      snuffbox: {
+        en: "Pain when pressing the triangular depression at the base of the thumb (Angoothe ke niche bane gadde me dard)",
+        hi: "अंगूठे के बिल्कुल पीछे नीचे बने गड्ढे (Snuffbox) को दबाने पर दर्द",
+        hn: "Angoothe ke bilkul piche niche bane gadde (Snuffbox) ko dabane par dard"
+      },
+      tubercle: {
+        en: "Pain when pressing the wrist bone on the palm side, under the thumb (Hatheli ki taraf angoothe ke niche wali haddi par dard)",
+        hi: "हथेली की तरफ अंगूठे के नीचे कलाई की हड्डी (Scaphoid Tubercle) को दबाने पर दर्द",
+        hn: "Hatheli ki taraf wrist ki haddi (angoothe ke niche) ko dabane par dard"
+      }
+    }
+  };
+
+  const joint = data[key];
+  if (!joint) return {};
+  const result = {};
+  Object.keys(joint).forEach(questionKey => {
+    result[questionKey] = joint[questionKey][currentLang] || joint[questionKey]['en'];
+  });
+  return result;
+};
+
 export default function App() {
 
   // --- AUTHENTICATION STATES & METHODS ---
@@ -617,6 +719,7 @@ export default function App() {
   // --- LANGUAGE & THEME (declared early — used in auth functions) ---
   const [lang, setLang] = useState('en');
   const [darkMode, setDarkMode] = useState(true);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   const [authEmail, setAuthEmail] = useState('');
   const [authPassword, setAuthPassword] = useState('');
@@ -648,42 +751,95 @@ export default function App() {
     setIsAuthLoading(true);
     setAuthError('');
 
+    const BACKEND_URL = "http://127.0.0.1:8000";
+
     if (currentMode === 'signup') {
-      const usersKey = 'injuryiq_users';
-      const localUsers = JSON.parse(localStorage.getItem(usersKey) || '[]');
-
-      // Check if email already exists
-      const exists = localUsers.some(u => u.email.toLowerCase() === emailVal.toLowerCase());
-      if (exists) {
-        setAuthError(lang === 'hi' ? 'इस ईमेल से पहले से खाता बना हुआ है।' : lang === 'hn' ? 'Is email se pehle se account bana hua hai.' : 'An account with this email already exists. Please login.');
-        setIsAuthLoading(false);
-        return;
-      }
-
-      // Save new user to localStorage
-      setTimeout(() => {
-        const newUser = {
-          email: emailVal.toLowerCase(),
-          password: passwordVal,
-          name: nameVal
-        };
+      try {
+        // 1. Try server-side registration
+        const response = await fetch(`${BACKEND_URL}/api/v1/auth/signup`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email: emailVal, password: passwordVal, name: nameVal })
+        });
+        
+        const data = await response.json();
+        
+        if (response.status === 200 && data.success) {
+          // Sync locally to cache
+          const usersKey = 'injuryiq_users';
+          const localUsers = JSON.parse(localStorage.getItem(usersKey) || '[]');
+          if (!localUsers.some(u => u.email.toLowerCase() === emailVal.toLowerCase())) {
+            localUsers.push({ email: emailVal.toLowerCase(), password: passwordVal, name: nameVal });
+            localStorage.setItem(usersKey, JSON.stringify(localUsers));
+          }
+          
+          setAuthMode('login');
+          setAuthPassword('');
+          setAuthError('');
+          setIsAuthLoading(false);
+          alert(lang === 'hi' ? `✅ ${nameVal} — रजिस्ट्रेशन सफल (डेटाबेस)! अब लॉगिन करें।` : `✅ Registration successful (stored in database)! Welcome ${nameVal}. Please login now.`);
+          return;
+        } else {
+          setAuthError(data.detail || 'Registration failed.');
+          setIsAuthLoading(false);
+          return;
+        }
+      } catch (networkErr) {
+        console.warn("[AUTH FALLBACK] Backend offline, falling back to local storage registry:", networkErr);
+        // Resilient Offline Local Fallback Flow
+        const usersKey = 'injuryiq_users';
+        const localUsers = JSON.parse(localStorage.getItem(usersKey) || '[]');
+        const exists = localUsers.some(u => u.email.toLowerCase() === emailVal.toLowerCase());
+        if (exists) {
+          setAuthError(lang === 'hi' ? 'इस ईमेल से पहले से खाता बना हुआ है।' : 'An account with this email already exists.');
+          setIsAuthLoading(false);
+          return;
+        }
+        
+        const newUser = { email: emailVal.toLowerCase(), password: passwordVal, name: nameVal };
         localUsers.push(newUser);
         localStorage.setItem(usersKey, JSON.stringify(localUsers));
-
+        
         setAuthMode('login');
         setAuthPassword('');
         setAuthError('');
         setIsAuthLoading(false);
-        alert(lang === 'hi' ? `✅ ${nameVal} — रजिस्ट्रेशन सफल! अब लॉगिन करें।` : `✅ Registration successful! Welcome ${nameVal}. Please login now.`);
-      }, 800);
-
-
+        alert(lang === 'hi' ? `✅ ${nameVal} — रजिस्ट्रेशन सफल (ऑफ़लाइन)! अब लॉगिन करें।` : `✅ Registration successful (offline backup)! Welcome ${nameVal}. Please login now.`);
+      }
     } else {
-      // Local Login flow as before
-      setTimeout(() => {
+      // Login Mode
+      try {
+        // 1. Try server-side login
+        const response = await fetch(`${BACKEND_URL}/api/v1/auth/login`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email: emailVal, password: passwordVal })
+        });
+        
+        const data = await response.json();
+        
+        if (response.status === 200 && data.success) {
+          const sessionUser = { email: data.user.email, name: data.user.name };
+          localStorage.setItem('injuryiq_current_user', JSON.stringify(sessionUser));
+          setCurrentUser(sessionUser);
+          
+          setAuthEmail('');
+          setAuthPassword('');
+          setAuthName('');
+          setIsAuthLoading(false);
+          return;
+        } else {
+          setAuthError(data.detail || 'Invalid email or password.');
+          setIsAuthLoading(false);
+          return;
+        }
+      } catch (networkErr) {
+        console.warn("[AUTH FALLBACK] Backend offline, falling back to local storage session check:", networkErr);
+        // Resilient Offline Local Fallback Login Flow
         const usersKey = 'injuryiq_users';
         const localUsers = JSON.parse(localStorage.getItem(usersKey) || '[]');
         const matchedUser = localUsers.find(u => u.email.toLowerCase() === emailVal.toLowerCase() && u.password === passwordVal);
+        
         if (!matchedUser) {
           setAuthError(lang === 'hi' ? 'अमान्य ईमेल या पासवर्ड।' : 'Invalid email or password.');
           setIsAuthLoading(false);
@@ -698,7 +854,7 @@ export default function App() {
         setAuthPassword('');
         setAuthName('');
         setIsAuthLoading(false);
-      }, 800);
+      }
     }
   };
 
@@ -1448,11 +1604,20 @@ CRITICAL:
 
   // --- SCORING CALCULATION ENGINE ---
   const calculateResult = () => {
+    console.warn("[TRIAGE SCORING ENGINE] Calculating risk level. Questionnaire answers:", {
+      boneProtruding: answers.boneProtruding,
+      numbnessBelow: answers.numbnessBelow,
+      blueColdBelow: answers.blueColdBelow,
+      unrelivedPain: answers.unrelivedPain,
+      deformity: answers.deformity,
+      skinColor: answers.skinColor
+    });
+
     const emergencyTriggers = [
-      answers.boneProtruding,
-      answers.numbnessBelow,
-      answers.blueColdBelow,
-      answers.unrelivedPain,
+      answers.boneProtruding === true,
+      answers.numbnessBelow === true,
+      answers.blueColdBelow === true,
+      answers.unrelivedPain === true,
       answers.deformity === 'yes',
       answers.skinColor === 'blue_purple' || answers.skinColor === 'pale_white'
     ];
@@ -2273,8 +2438,6 @@ Return your response strictly in the following JSON format:
   }
 
 
-  const [mobileMenuOpen, setMobileMenuOpen] = React.useState(false);
-
   return (
     <div className="container">
       {/* --- TOP HEADLINE NAVIGATION --- */}
@@ -2678,31 +2841,57 @@ Return your response strictly in the following JSON format:
                 <h3 style={{ fontSize: '1.4rem', fontWeight: 700, marginBottom: '1.5rem' }}>{t.mechanismLabel}</h3>
                 
                 <div style={{ marginBottom: '1.5rem' }}>
-                  <label style={{ display: 'block', fontWeight: 600, marginBottom: '0.5rem' }}>{lang === 'hi' ? "चोट कैसे लगी?" : "How did the injury occur?"}</label>
+                  <label style={{ block: 'block', fontWeight: 600, marginBottom: '0.5rem' }}>{lang === 'hi' ? "चोट कैसे लगी?" : lang === 'hn' ? "Chot kaise lagi?" : "How did the injury occur?"}</label>
                   <select 
                     className="glass-panel" 
                     value={answers.howInjured}
                     onChange={(e) => handleAnswerChange('howInjured', e.target.value)}
                     style={{ width: '100%', padding: '0.75rem', fontSize: '1rem', color: 'inherit', background: 'var(--bg-surface)' }}
                   >
-                    <option value="twist_roll">{lang === 'hi' ? 'जोड़ मुड़ जाना (मोच आना)' : 'Twisting / Rolling joint (Moch)'}</option>
-                    <option value="fall_height">{lang === 'hi' ? 'ऊंचाई से गिरना' : 'Fall from a height'}</option>
-                    <option value="foosh">{lang === 'hi' ? 'हाथ के बल गिरना' : 'Fall on Outstretched Hand (FOOSH)'}</option>
-                    <option value="sports_collision">{lang === 'hi' ? 'खेल के दौरान टक्कर लगना' : 'Sports collision'}</option>
-                    <option value="vehicle_accident">{lang === 'hi' ? 'बाइक या वाहन दुर्घटना' : 'Bike or vehicle slip/accident'}</option>
-                    <option value="direct_blow">{lang === 'hi' ? 'जोड़ पर सीधी चोट / प्रहार' : 'Direct hit / blunt blow'}</option>
-                    <option value="other">{lang === 'hi' ? 'अन्य कारण' : 'Other mechanism'}</option>
+                    <option value="twist_roll">
+                      {lang === 'hi' ? 'जोड़ मुड़ जाना (मोच आना)' : lang === 'hn' ? 'Joint ka mudna ya roll hona (Moch)' : 'Twisting / Rolling the joint (Moch)'}
+                    </option>
+                    <option value="fall_height">
+                      {lang === 'hi' ? 'ऊंचाई से गिरना (जैसे सीढ़ी या स्टूल से)' : lang === 'hn' ? 'Oonchai se girna (jaise stairs se)' : 'Falling from a height (stairs/stool)'}
+                    </option>
+                    <option value="foosh">
+                      {lang === 'hi' ? 'हाथ के बल गिरना (हथेली ज़मीन पर टिकना)' : lang === 'hn' ? 'Haath/Hatheli ke bal zameen par girna' : 'Falling forward on an open hand / palm'}
+                    </option>
+                    <option value="sports_collision">
+                      {lang === 'hi' ? 'खेल के दौरान टक्कर या गिरना' : lang === 'hn' ? 'Sports ke time takkar lagna ya girna' : 'Collision or fall during sports'}
+                    </option>
+                    <option value="vehicle_accident">
+                      {lang === 'hi' ? 'बाइक, स्कूटर या वाहन दुर्घटना' : lang === 'hn' ? 'Bike, scooter ya gadi se slip hona/accident' : 'Bike or vehicle accident/slip'}
+                    </option>
+                    <option value="direct_blow">
+                      {lang === 'hi' ? 'जोड़ पर सीधी चोट (जैसे कोई भारी चीज़ गिरना)' : lang === 'hn' ? 'Joint par direct hit ya koi bhari cheez girna' : 'Direct hit or heavy object falling on joint'}
+                    </option>
+                    <option value="other">
+                      {lang === 'hi' ? 'अन्य कोई कारण' : lang === 'hn' ? 'Koi dusra reason' : 'Other reason'}
+                    </option>
                   </select>
                 </div>
-
+ 
                 <div style={{ marginBottom: '1.5rem' }}>
                   <label style={{ display: 'block', fontWeight: 600, marginBottom: '0.5rem' }}>{t.soundLabel}</label>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
                     {[
-                      { id: 'crack_snap', label: lang === 'hi' ? 'चटकने या टूटने की आवाज (Crack sound)' : 'Cracking or snapping sound' },
-                      { id: 'pop_snap', label: lang === 'hi' ? 'पॉप होने या लिगामेंट फटने की आवाज' : 'Popping or ligament snap sound' },
-                      { id: 'no_sound', label: lang === 'hi' ? 'कोई विशेष आवाज नहीं सुनाई दी' : 'No specific sound heard' },
-                      { id: 'not_sure', label: lang === 'hi' ? 'निश्चित नहीं / याद नहीं है' : 'Not sure / Do not remember' }
+                      { 
+                        id: 'crack_snap', 
+                        label: lang === 'hi' ? 'हड्डी चटकने या टूटने जैसी आवाज़' : lang === 'hn' ? 'Haddi chatakne ya tootne jaisi aawaz (Crack/Snap)' : 'A cracking or snapping sound (like a bone crack)' 
+                      },
+                      { 
+                        id: 'pop_snap', 
+                        label: lang === 'hi' ? 'नस या लिगामेंट फटने जैसी आवाज़' : lang === 'hn' ? 'Nas/Ligament fatne ya pop hone jaisi aawaz (Pop sound)' : 'A popping or tearing sound (like a ligament snap)' 
+                      },
+                      { 
+                        id: 'no_sound', 
+                        label: lang === 'hi' ? 'कोई आवाज़ नहीं सुनाई दी' : lang === 'hn' ? 'Koi aawaz nahi sunai di' : 'No sound heard' 
+                      },
+                      { 
+                        id: 'not_sure', 
+                        label: lang === 'hi' ? 'निश्चित नहीं / याद नहीं है' : lang === 'hn' ? 'Neechit nahi / Yaad nahi' : 'Not sure / Do not remember' 
+                      }
                     ].map(opt => (
                       <label key={opt.id} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
                         <input 
@@ -2718,7 +2907,7 @@ Return your response strictly in the following JSON format:
                 </div>
               </div>
             )}
-
+ 
             {/* STEP 3: PAIN Assessment */}
             {currentStep === 3 && (
               <div className="fade-in">
@@ -2746,7 +2935,7 @@ Return your response strictly in the following JSON format:
                     <span>😱 <span style={{ fontSize: '0.7rem', display: 'block', textAlign: 'center' }}>10</span></span>
                   </div>
                 </div>
-
+ 
                 <div className="form-grid-2col">
                   <div>
                     <label style={{ display: 'block', fontWeight: 600, marginBottom: '0.5rem' }}>{t.painTypeLabel}</label>
@@ -2756,33 +2945,41 @@ Return your response strictly in the following JSON format:
                       onChange={(e) => handleAnswerChange('painType', e.target.value)}
                       style={{ width: '100%', padding: '0.5rem', color: 'inherit', background: 'var(--bg-surface)' }}
                     >
-                      <option value="sharp_stabbing">{lang === 'hi' ? 'तेज, चुभने वाला दर्द' : 'Sharp, stabbing pain'}</option>
-                      <option value="dull_aching">{lang === 'hi' ? 'हल्का, मीठा दर्द' : 'Dull, aching pain'}</option>
-                      <option value="throbbing">{lang === 'hi' ? 'लगातार धड़कने वाला दर्द' : 'Constant throbbing pain'}</option>
-                      <option value="burning">{lang === 'hi' ? 'जलन महसूस होना' : 'Burning pain'}</option>
+                      <option value="sharp_stabbing">
+                        {lang === 'hi' ? 'तेज़, चुभने वाला दर्द' : lang === 'hn' ? 'Tez, chubhnewala dard' : 'Sharp, stabbing pain'}
+                      </option>
+                      <option value="dull_aching">
+                        {lang === 'hi' ? 'हल्का, लगातार होने वाला मीठा दर्द' : lang === 'hn' ? 'Halka, lagatar hone wala meetha dard' : 'Dull, constant aching pain'}
+                      </option>
+                      <option value="throbbing">
+                        {lang === 'hi' ? 'धड़कने या टीस मारने वाला दर्द' : lang === 'hn' ? 'Dhak-dhak karne ya tees marne wala dard' : 'Throbbing pain'}
+                      </option>
+                      <option value="burning">
+                        {lang === 'hi' ? 'जलन महसूस होना' : lang === 'hn' ? 'Jalan jaisa dard/sensation' : 'Burning pain/sensation'}
+                      </option>
                     </select>
                   </div>
                   <div>
                     <label style={{ display: 'block', fontWeight: 600, marginBottom: '0.5rem' }}>{t.painReliefLabel}</label>
                     <div style={{ display: 'flex', gap: '1rem', marginTop: '0.5rem' }}>
                       <label style={{ cursor: 'pointer' }}>
-                        <input type="radio" name="painRelief" checked={answers.painReliefWithMeds === 'yes'} onChange={() => handleAnswerChange('painReliefWithMeds', 'yes')} /> {lang === 'hi' ? "हाँ" : "Yes"}
+                        <input type="radio" name="painRelief" checked={answers.painReliefWithMeds === 'yes'} onChange={() => handleAnswerChange('painReliefWithMeds', 'yes')} /> {lang === 'hi' ? "हाँ, आराम मिलता है" : lang === 'hn' ? "Haan, dawai se aaram milta hai" : "Yes, pain decreases"}
                       </label>
                       <label style={{ cursor: 'pointer' }}>
-                        <input type="radio" name="painRelief" checked={answers.painReliefWithMeds === 'no'} onChange={() => handleAnswerChange('painReliefWithMeds', 'no')} /> {lang === 'hi' ? "नहीं (दर्द बना रहता है)" : "No (Pain persists)"}
+                        <input type="radio" name="painRelief" checked={answers.painReliefWithMeds === 'no'} onChange={() => handleAnswerChange('painReliefWithMeds', 'no')} /> {lang === 'hi' ? "नहीं, दर्द बना रहता है" : lang === 'hn' ? "Nahi, dawai se aaram nahi milta" : "No, pain stays the same"}
                       </label>
                     </div>
                   </div>
                 </div>
-
+ 
                 <div>
                   <label style={{ display: 'block', fontWeight: 600, marginBottom: '0.5rem' }}>{t.painIncreasesLabel}</label>
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
                     {[
-                      { id: 'constant_rest', label: lang === 'hi' ? 'आराम करते समय भी दर्द होना' : 'Constant pain even at rest' },
-                      { id: 'when_moving', label: lang === 'hi' ? 'जोड़ हिलाने पर' : 'When moving the joint' },
-                      { id: 'when_touching', label: lang === 'hi' ? 'दबाने या छूने पर' : 'When pressing/touching the joint' },
-                      { id: 'when_bearing_weight', label: lang === 'hi' ? 'वजन डालने/खड़े होने पर' : 'When putting weight/standing' }
+                      { id: 'constant_rest', label: lang === 'hi' ? 'आराम करते समय भी लगातार दर्द होना' : lang === 'hn' ? 'Aaram karte time bhi lagatar dard hona' : 'Constant pain even at rest' },
+                      { id: 'when_moving', label: lang === 'hi' ? 'जोड़ को हिलाने-डुलाने पर' : lang === 'hn' ? 'Joint ko hilane-dulane par' : 'When moving the joint' },
+                      { id: 'when_touching', label: lang === 'hi' ? 'जोड़ को दबाने या छूने पर' : lang === 'hn' ? 'Joint ko dabane ya touch karne par' : 'When pressing or touching the joint' },
+                      { id: 'when_bearing_weight', label: lang === 'hi' ? 'पैर पर वजन डालने या खड़े होने पर' : lang === 'hn' ? 'Pair par weight daalne ya khade hone par' : 'When putting weight/standing on it' }
                     ].map(opt => (
                       <button 
                         key={opt.id}
@@ -2881,221 +3078,460 @@ Return your response strictly in the following JSON format:
             )}
 
             {/* STEP 5: TENDERNESS LANDMARKS check */}
-            {currentStep === 5 && (
-              <div className="fade-in">
-                <h3 style={{ fontSize: '1.4rem', fontWeight: 700, marginBottom: '0.5rem' }}>{lang === 'hi' ? "हड्डी में दर्द का सत्यापन (Ottawa Rules)" : "Interactive Bone Tenderness Checklist"}</h3>
-                <p style={{ fontSize: '0.85rem', color: darkMode ? 'var(--text-secondary)' : 'var(--text-light-secondary)', marginBottom: '1.5rem' }}>
-                  {lang === 'hi' ? "नीचे दिए गए चित्र के हॉटस्पॉट पर क्लिक करें। ओटावा नियम पीले रंग में चिह्नित हैं।" : "Tapping these hotspots toggles bone tenderness. Ottawa Rules check is highlighted in yellow."}
-                </p>
+            {currentStep === 5 && (() => {
+              const labels = getTendernessText(injuryArea, lang);
+              return (
+                <div className="fade-in">
+                  <h3 style={{ fontSize: '1.4rem', fontWeight: 700, marginBottom: '0.5rem' }}>
+                    {lang === 'hi' ? "हड्डी में दर्द का सत्यापन (Ottawa Rules)" : lang === 'hn' ? "Haddi me Dard ka Verification (Ottawa Rules)" : "Interactive Bone Tenderness Checklist"}
+                  </h3>
+                  <p style={{ fontSize: '0.85rem', color: darkMode ? 'var(--text-secondary)' : 'var(--text-light-secondary)', marginBottom: '1.5rem' }}>
+                    {lang === 'hi' ? "नीचे दिए गए चित्र के हॉटस्पॉट पर क्लिक करें। ओटावा नियम लाल रंग में चिह्नित होंगे।" : lang === 'hn' ? "Niche diye gaye diagram ke hotspots par touch karein. Ottawa points red color me show honge." : "Tap these hotspots to toggle bone tenderness. Selected areas will be highlighted in red."}
+                  </p>
 
-                {/* ANKLE */}
-                {injuryArea === 'ankle' && (
-                  <div className="joint-assessment-grid">
-                    <div style={{ display: 'flex', justifyContent: 'center' }}>
-                      <svg width="200" height="200" viewBox="0 0 100 100" style={{ background: 'rgba(255,255,255,0.02)', borderRadius: '12px', border: '1px dashed var(--border)' }}>
-                        <path d="M40 20 L40 70 L50 85 L65 85 L60 70 L55 20 Z" fill="rgba(255,255,255,0.1)" stroke="#555" strokeWidth="1" />
-                        <circle cx="50" cy="80" r="10" fill="none" stroke="#fff" strokeWidth="0.5" strokeDasharray="2" />
-                        <text x="35" y="15" fill="#aaa" fontSize="4">Tibia/Fibula</text>
-                        
-                        <circle 
-                          cx="60" 
-                          cy="78" 
-                          r="6" 
-                          fill={answers.lateralMalleolusTenderness ? "var(--color-high)" : "rgba(59, 130, 246, 0.4)"} 
-                          stroke={answers.lateralMalleolusTenderness ? "#fff" : "none"}
-                          strokeWidth="1"
-                          style={{ cursor: 'pointer', transition: 'all 0.2s' }}
-                          onClick={() => handleAnswerChange('lateralMalleolusTenderness', !answers.lateralMalleolusTenderness)}
-                        />
-                        <text x="68" y="80" fill={answers.lateralMalleolusTenderness ? "var(--color-high)" : "#888"} fontSize="5" fontWeight="bold">Lateral</text>
+                  {/* ANKLE */}
+                  {injuryArea === 'ankle' && (
+                    <div className="joint-assessment-grid">
+                      <div style={{ display: 'flex', justifyContent: 'center' }}>
+                        <svg width="240" height="240" viewBox="0 0 120 120" style={{ background: 'rgba(15, 23, 42, 0.75)', borderRadius: '16px', border: '1px solid rgba(255,255,255,0.12)', boxShadow: '0 8px 32px rgba(0,0,0,0.5)', padding: '8px' }}>
+                          <defs>
+                            <linearGradient id="premiumBoneGradAnkle" x1="0%" y1="0%" x2="100%" y2="100%">
+                              <stop offset="0%" stopColor="#ffffff" stopOpacity="0.95" />
+                              <stop offset="60%" stopColor="#f8fafc" stopOpacity="0.85" />
+                              <stop offset="100%" stopColor="#cbd5e1" stopOpacity="0.5" />
+                            </linearGradient>
+                            <radialGradient id="jointGlowAnkle" cx="50%" cy="50%" r="50%">
+                              <stop offset="0%" stopColor="rgba(0, 194, 168, 0.2)" />
+                              <stop offset="100%" stopColor="rgba(15, 23, 42, 0)" />
+                            </radialGradient>
+                          </defs>
 
-                        <circle 
-                          cx="38" 
-                          cy="78" 
-                          r="6" 
-                          fill={answers.medialMalleolusTenderness ? "var(--color-high)" : "rgba(59, 130, 246, 0.4)"} 
-                          stroke={answers.medialMalleolusTenderness ? "#fff" : "none"}
-                          strokeWidth="1"
-                          style={{ cursor: 'pointer', transition: 'all 0.2s' }}
-                          onClick={() => handleAnswerChange('medialMalleolusTenderness', !answers.medialMalleolusTenderness)}
-                        />
-                        <text x="12" y="80" fill={answers.medialMalleolusTenderness ? "var(--color-high)" : "#888"} fontSize="5" fontWeight="bold">Medial</text>
-                      </svg>
+                          {/* Soft background joint glow */}
+                          <circle cx="60" cy="60" r="50" fill="url(#jointGlowAnkle)" />
+
+                          {/* Background Silhouette of Leg/Foot */}
+                          <path d="M 45 5 C 45 5, 43 70, 36 78 C 30 84, 18 90, 18 98 C 18 108, 28 112, 45 112 C 65 112, 85 112, 98 106 C 104 103, 106 98, 102 96 C 96 92, 82 86, 75 75 C 75 60, 75 5, 75 5 Z" fill="rgba(255, 255, 255, 0.02)" stroke="rgba(255,255,255,0.06)" strokeWidth="1" />
+
+                          {/* Detailed Skeletal Bones */}
+                          {/* Calcaneus (Heel Bone) */}
+                          <path d="M 40 92 C 30 92, 26 102, 34 107 C 42 110, 50 108, 48 98 C 47 95, 43 93, 40 92 Z" fill="url(#premiumBoneGradAnkle)" stroke="rgba(255,255,255,0.25)" strokeWidth="0.8" />
+                          
+                          {/* Talus */}
+                          <path d="M 43 87 C 41 85, 55 83, 58 87 C 60 91, 53 94, 46 93 C 44 92, 43 89, 43 87 Z" fill="url(#premiumBoneGradAnkle)" stroke="rgba(255,255,255,0.3)" strokeWidth="0.8" />
+
+                          {/* Detailed Tibia (Inner Bone) */}
+                          <path d="M 46 5 C 47 10, 48 40, 48 65 C 48 72, 41 74, 40 85 C 40 91, 50 92, 53 87 C 55 83, 56 68, 56 10 Z" fill="url(#premiumBoneGradAnkle)" stroke="rgba(255,255,255,0.35)" strokeWidth="1" />
+                          
+                          {/* Detailed Fibula (Outer Bone) */}
+                          <path d="M 64 5 C 64 10, 63 40, 63 65 C 63 71, 72 73, 72 85 C 72 90, 68 91, 66 85 C 65 80, 68 68, 68 10 Z" fill="url(#premiumBoneGradAnkle)" stroke="rgba(255,255,255,0.25)" strokeWidth="0.8" />
+
+                          {/* Metatarsals (Foot bones extension) */}
+                          <path d="M 52 90 L 59 93 L 64 90 L 57 88 Z" fill="url(#premiumBoneGradAnkle)" stroke="rgba(255,255,255,0.15)" strokeWidth="0.5" />
+                          <path d="M 57 93 L 88 101 M 58 94 L 84 105 M 59 95 L 81 108 M 60 96 L 76 111 M 61 97 L 70 112" stroke="rgba(255,255,255,0.4)" strokeWidth="0.8" fill="none" />
+
+                          {/* Clinical Labels and Dashed Pointer lines */}
+                          {/* Tibia Pointer */}
+                          <line x1="49" y1="35" x2="25" y2="35" stroke="rgba(255, 255, 255, 0.4)" strokeWidth="0.8" strokeDasharray="2" />
+                          <circle cx="49" cy="35" r="1.5" fill="#ffffff" />
+                          <text x="22" y="37" fill="#94a3b8" fontSize="4.5" textAnchor="end" style={{ userSelect: 'none', fontWeight: 500 }}>Tibia</text>
+
+                          {/* Fibula Pointer */}
+                          <line x1="66" y1="40" x2="88" y2="40" stroke="rgba(255, 255, 255, 0.4)" strokeWidth="0.8" strokeDasharray="2" />
+                          <circle cx="66" cy="40" r="1.5" fill="#ffffff" />
+                          <text x="91" y="42" fill="#94a3b8" fontSize="4.5" style={{ userSelect: 'none', fontWeight: 500 }}>Fibula</text>
+
+                          {/* Talus Pointer */}
+                          <line x1="50" y1="88" x2="88" y2="88" stroke="rgba(255, 255, 255, 0.4)" strokeWidth="0.8" strokeDasharray="2" />
+                          <circle cx="50" cy="88" r="1.5" fill="#ffffff" />
+                          <text x="91" y="90" fill="#94a3b8" fontSize="4.5" style={{ userSelect: 'none', fontWeight: 500 }}>Talus</text>
+
+                          {/* Calcaneus Pointer */}
+                          <line x1="36" y1="102" x2="22" y2="102" stroke="rgba(255, 255, 255, 0.4)" strokeWidth="0.8" strokeDasharray="2" />
+                          <circle cx="36" cy="102" r="1.5" fill="#ffffff" />
+                          <text x="19" y="104" fill="#94a3b8" fontSize="4.5" textAnchor="end" style={{ userSelect: 'none', fontWeight: 500 }}>Calcaneus</text>
+
+                          {/* Interactive Hotspot 1: Lateral Malleolus (Outer Bone - right side) */}
+                          <g onClick={() => handleAnswerChange('lateralMalleolusTenderness', !answers.lateralMalleolusTenderness)} style={{ cursor: 'pointer' }}>
+                            <line x1="72" y1="85" x2="88" y2="85" stroke={answers.lateralMalleolusTenderness ? "#ef4444" : "rgba(255, 255, 255, 0.4)"} strokeWidth="0.8" strokeDasharray="2" />
+                            <circle cx="72" cy="85" r="10" fill="none" stroke={answers.lateralMalleolusTenderness ? "#ef4444" : "#38bdf8"} strokeWidth="1.2" strokeOpacity={answers.lateralMalleolusTenderness ? "0.4" : "0.25"}>
+                              {!answers.lateralMalleolusTenderness && (
+                                <animate attributeName="r" values="5;11;5" dur="3s" repeatCount="indefinite" />
+                              )}
+                              {!answers.lateralMalleolusTenderness && (
+                                <animate attributeName="stroke-opacity" values="0.8;0;0.8" dur="3s" repeatCount="indefinite" />
+                              )}
+                            </circle>
+                            <circle cx="72" cy="85" r={answers.lateralMalleolusTenderness ? 6.5 : 4.5} fill={answers.lateralMalleolusTenderness ? "#ef4444" : "rgba(56, 189, 248, 0.3)"} stroke={answers.lateralMalleolusTenderness ? "#ffffff" : "#38bdf8"} strokeWidth="1.2" style={{ transition: 'all 0.2s ease-in-out' }} />
+                            <circle cx="72" cy="85" r="1.5" fill="#ffffff" />
+                          </g>
+                          <text x="91" y="87" fill={answers.lateralMalleolusTenderness ? "#ef4444" : "#cbd5e1"} fontSize="5.2" fontWeight="bold" style={{ userSelect: 'none' }}>
+                            {lang === 'hi' ? 'बाहरी हड्डी' : lang === 'hn' ? 'Bahar ki haddi' : 'Outer Bone'}
+                          </text>
+
+                          {/* Interactive Hotspot 2: Medial Malleolus (Inner Bone - left side) */}
+                          <g onClick={() => handleAnswerChange('medialMalleolusTenderness', !answers.medialMalleolusTenderness)} style={{ cursor: 'pointer' }}>
+                            <line x1="40" y1="85" x2="25" y2="85" stroke={answers.medialMalleolusTenderness ? "#ef4444" : "rgba(255, 255, 255, 0.4)"} strokeWidth="0.8" strokeDasharray="2" />
+                            <circle cx="40" cy="85" r="10" fill="none" stroke={answers.medialMalleolusTenderness ? "#ef4444" : "#38bdf8"} strokeWidth="1.2" strokeOpacity={answers.medialMalleolusTenderness ? "0.4" : "0.25"}>
+                              {!answers.medialMalleolusTenderness && (
+                                <animate attributeName="r" values="5;11;5" dur="3s" repeatCount="indefinite" />
+                              )}
+                              {!answers.medialMalleolusTenderness && (
+                                <animate attributeName="stroke-opacity" values="0.8;0;0.8" dur="3s" repeatCount="indefinite" />
+                              )}
+                            </circle>
+                            <circle cx="40" cy="85" r={answers.medialMalleolusTenderness ? 6.5 : 4.5} fill={answers.medialMalleolusTenderness ? "#ef4444" : "rgba(56, 189, 248, 0.3)"} stroke={answers.medialMalleolusTenderness ? "#ffffff" : "#38bdf8"} strokeWidth="1.2" style={{ transition: 'all 0.2s ease-in-out' }} />
+                            <circle cx="40" cy="85" r="1.5" fill="#ffffff" />
+                          </g>
+                          <text x="22" y="87" fill={answers.medialMalleolusTenderness ? "#ef4444" : "#cbd5e1"} fontSize="5.2" fontWeight="bold" textAnchor="end" style={{ userSelect: 'none' }}>
+                            {lang === 'hi' ? 'भीतरी हड्डी' : lang === 'hn' ? 'Andar ki haddi' : 'Inner Bone'}
+                          </text>
+                        </svg>
+                      </div>
+
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                        <div style={{ fontSize: '0.9rem', fontWeight: 600 }}>{labels.header}</div>
+                        <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
+                          <input type="checkbox" checked={answers.lateralMalleolusTenderness} onChange={(e) => handleAnswerChange('lateralMalleolusTenderness', e.target.checked)} />
+                          {labels.lateralMalleolus}
+                        </label>
+                        <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
+                          <input type="checkbox" checked={answers.medialMalleolusTenderness} onChange={(e) => handleAnswerChange('medialMalleolusTenderness', e.target.checked)} />
+                          {labels.medialMalleolus}
+                        </label>
+                        <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
+                          <input type="checkbox" checked={!answers.canWalkImmediately} onChange={(e) => handleAnswerChange('canWalkImmediately', !e.target.checked)} />
+                          {labels.walkImmediately}
+                        </label>
+                        <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
+                          <input type="checkbox" checked={!answers.canWalkNow} onChange={(e) => handleAnswerChange('canWalkNow', !e.target.checked)} />
+                          {labels.walkNow}
+                        </label>
+                      </div>
                     </div>
+                  )}
 
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-                      <div style={{ fontSize: '0.9rem', fontWeight: 600 }}>{lang === 'hi' ? 'टखने के नियम:' : 'Ottawa Ankle Rules Questions:'}</div>
-                      <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
-                        <input type="checkbox" checked={answers.lateralMalleolusTenderness} onChange={(e) => handleAnswerChange('lateralMalleolusTenderness', e.target.checked)} />
-                        {lang === 'hi' ? "बाहरी हड्डी (Lateral Malleolus) में छूने पर दर्द" : "Tenderness at Lateral Malleolus (Outer bone)"}
-                      </label>
-                      <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
-                        <input type="checkbox" checked={answers.medialMalleolusTenderness} onChange={(e) => handleAnswerChange('medialMalleolusTenderness', e.target.checked)} />
-                        {lang === 'hi' ? "भीतरी हड्डी (Medial Malleolus) में छूने पर दर्द" : "Tenderness at Medial Malleolus (Inner bone)"}
-                      </label>
-                      <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
-                        <input type="checkbox" checked={!answers.canWalkImmediately} onChange={(e) => handleAnswerChange('canWalkImmediately', !e.target.checked)} />
-                        {lang === 'hi' ? "चोट के तुरंत बाद 4 कदम चलने में असमर्थ" : "Unable to walk 4 steps immediately"}
-                      </label>
-                      <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
-                        <input type="checkbox" checked={!answers.canWalkNow} onChange={(e) => handleAnswerChange('canWalkNow', !e.target.checked)} />
-                        {lang === 'hi' ? "अभी 4 कदम चलने में असमर्थ" : "Unable to walk 4 steps NOW"}
-                      </label>
+                  {/* FOOT */}
+                  {injuryArea === 'foot' && (
+                    <div className="joint-assessment-grid">
+                      <div style={{ display: 'flex', justifyContent: 'center' }}>
+                        <svg width="240" height="240" viewBox="0 0 120 120" style={{ background: 'rgba(15, 23, 42, 0.75)', borderRadius: '16px', border: '1px solid rgba(255,255,255,0.12)', boxShadow: '0 8px 32px rgba(0,0,0,0.5)', padding: '8px' }}>
+                          <defs>
+                            <linearGradient id="premiumBoneGradFoot" x1="0%" y1="0%" x2="100%" y2="100%">
+                              <stop offset="0%" stopColor="#ffffff" stopOpacity="0.95" />
+                              <stop offset="60%" stopColor="#f8fafc" stopOpacity="0.85" />
+                              <stop offset="100%" stopColor="#cbd5e1" stopOpacity="0.5" />
+                            </linearGradient>
+                            <radialGradient id="jointGlowFoot" cx="50%" cy="50%" r="50%">
+                              <stop offset="0%" stopColor="rgba(0, 194, 168, 0.2)" />
+                              <stop offset="100%" stopColor="rgba(15, 23, 42, 0)" />
+                            </radialGradient>
+                          </defs>
+
+                          {/* Soft background joint glow */}
+                          <circle cx="60" cy="60" r="50" fill="url(#jointGlowFoot)" />
+
+                          {/* Background Silhouette of Foot */}
+                          <path d="M 60 115 C 50 115, 44 95, 44 85 C 44 75, 34 60, 32 45 C 30 35, 32 20, 42 15 C 48 12, 54 15, 57 24 C 60 15, 66 12, 72 15 C 78 12, 84 15, 87 22 C 90 18, 96 20, 98 28 C 100 38, 98 52, 94 65 C 90 78, 86 90, 84 98 C 82 106, 75 115, 60 115 Z" fill="rgba(255, 255, 255, 0.02)" stroke="rgba(255,255,255,0.06)" strokeWidth="1" />
+
+                          {/* Calcaneus (Heel Bone) */}
+                          <path d="M 52 108 C 45 108, 44 94, 53 90 C 62 86, 64 96, 58 106 C 56 108, 54 108, 52 108 Z" fill="url(#premiumBoneGradFoot)" stroke="rgba(255,255,255,0.25)" strokeWidth="0.8" />
+                          
+                          {/* Talus */}
+                          <path d="M 53 88 C 48 84, 60 80, 62 86 C 64 92, 58 92, 53 88 Z" fill="url(#premiumBoneGradFoot)" stroke="rgba(255,255,255,0.25)" strokeWidth="0.8" />
+
+                          {/* Navicular (Inner mid-arch bone) */}
+                          <path d="M 44 78 C 38 74, 46 68, 49 74 C 52 80, 48 82, 44 78 Z" fill="url(#premiumBoneGradFoot)" stroke="rgba(255,255,255,0.3)" strokeWidth="0.8" />
+
+                          {/* Cuboid & Cuneiforms */}
+                          <path d="M 62 76 C 58 72, 68 68, 70 74 Z" fill="url(#premiumBoneGradFoot)" stroke="rgba(255,255,255,0.2)" strokeWidth="0.6" />
+
+                          {/* Metatarsals */}
+                          {/* 1st Metatarsal (medial/thumb) */}
+                          <path d="M 46 72 L 38 42 C 34 38, 42 36, 44 42 L 52 70 Z" fill="url(#premiumBoneGradFoot)" stroke="rgba(255,255,255,0.3)" strokeWidth="0.8" />
+                          {/* 2nd Metatarsal */}
+                          <path d="M 50 73 L 48 38 C 47 34, 53 34, 54 38 L 54 71 Z" fill="url(#premiumBoneGradFoot)" stroke="rgba(255,255,255,0.25)" strokeWidth="0.6" />
+                          {/* 3rd Metatarsal */}
+                          <path d="M 55 74 L 59 38 C 58 34, 64 34, 63 38 L 60 72 Z" fill="url(#premiumBoneGradFoot)" stroke="rgba(255,255,255,0.25)" strokeWidth="0.6" />
+                          {/* 4th Metatarsal */}
+                          <path d="M 61 75 L 70 41 C 69 37, 75 38, 74 42 L 66 74 Z" fill="url(#premiumBoneGradFoot)" stroke="rgba(255,255,255,0.25)" strokeWidth="0.6" />
+                          {/* 5th Metatarsal (lateral/pinky) */}
+                          <path d="M 72 70 C 72 68, 64 72, 65 75 L 76 45 C 75 41, 81 42, 80 46 L 73 76 C 73 78, 72 72, 72 70 Z" fill="url(#premiumBoneGradFoot)" stroke="rgba(255,255,255,0.35)" strokeWidth="0.8" />
+
+                          {/* Clinical Labels and Dashed Pointer lines */}
+                          {/* Calcaneus Pointer */}
+                          <line x1="52" y1="99" x2="25" y2="99" stroke="rgba(255, 255, 255, 0.4)" strokeWidth="0.8" strokeDasharray="2" />
+                          <circle cx="52" cy="99" r="1.5" fill="#ffffff" />
+                          <text x="22" y="101" fill="#94a3b8" fontSize="4.5" textAnchor="end" style={{ userSelect: 'none', fontWeight: 500 }}>Calcaneus</text>
+
+                          {/* Interactive Hotspot 1: 5th Metatarsal Base (outer side bump) */}
+                          <g onClick={() => handleAnswerChange('fifthMetatarsalTenderness', !answers.fifthMetatarsalTenderness)} style={{ cursor: 'pointer' }}>
+                            <line x1="72" y1="70" x2="88" y2="70" stroke={answers.fifthMetatarsalTenderness ? "#ef4444" : "rgba(255, 255, 255, 0.4)"} strokeWidth="0.8" strokeDasharray="2" />
+                            <circle cx="72" cy="70" r="10" fill="none" stroke={answers.fifthMetatarsalTenderness ? "#ef4444" : "#38bdf8"} strokeWidth="1.2" strokeOpacity={answers.fifthMetatarsalTenderness ? "0.4" : "0.25"}>
+                              {!answers.fifthMetatarsalTenderness && (
+                                <animate attributeName="r" values="5;11;5" dur="3s" repeatCount="indefinite" />
+                              )}
+                              {!answers.fifthMetatarsalTenderness && (
+                                <animate attributeName="stroke-opacity" values="0.8;0;0.8" dur="3s" repeatCount="indefinite" />
+                              )}
+                            </circle>
+                            <circle cx="72" cy="70" r={answers.fifthMetatarsalTenderness ? 6.5 : 4.5} fill={answers.fifthMetatarsalTenderness ? "#ef4444" : "rgba(56, 189, 248, 0.3)"} stroke={answers.fifthMetatarsalTenderness ? "#ffffff" : "#38bdf8"} strokeWidth="1.2" style={{ transition: 'all 0.2s ease-in-out' }} />
+                            <circle cx="72" cy="70" r="1.5" fill="#ffffff" />
+                          </g>
+                          <text x="91" y="72" fill={answers.fifthMetatarsalTenderness ? "#ef4444" : "#cbd5e1"} fontSize="5.2" fontWeight="bold" style={{ userSelect: 'none' }}>
+                            {lang === 'hi' ? 'बाहरी किनारा' : lang === 'hn' ? 'Bahar ka edge' : 'Outer Edge'}
+                          </text>
+
+                          {/* Interactive Hotspot 2: Navicular Bone (inner arch bone) */}
+                          <g onClick={() => handleAnswerChange('navicularTenderness', !answers.navicularTenderness)} style={{ cursor: 'pointer' }}>
+                            <line x1="42" y1="75" x2="25" y2="75" stroke={answers.navicularTenderness ? "#ef4444" : "rgba(255, 255, 255, 0.4)"} strokeWidth="0.8" strokeDasharray="2" />
+                            <circle cx="42" cy="75" r="10" fill="none" stroke={answers.navicularTenderness ? "#ef4444" : "#38bdf8"} strokeWidth="1.2" strokeOpacity={answers.navicularTenderness ? "0.4" : "0.25"}>
+                              {!answers.navicularTenderness && (
+                                <animate attributeName="r" values="5;11;5" dur="3s" repeatCount="indefinite" />
+                              )}
+                              {!answers.navicularTenderness && (
+                                <animate attributeName="stroke-opacity" values="0.8;0;0.8" dur="3s" repeatCount="indefinite" />
+                              )}
+                            </circle>
+                            <circle cx="42" cy="75" r={answers.navicularTenderness ? 6.5 : 4.5} fill={answers.navicularTenderness ? "#ef4444" : "rgba(56, 189, 248, 0.3)"} stroke={answers.navicularTenderness ? "#ffffff" : "#38bdf8"} strokeWidth="1.2" style={{ transition: 'all 0.2s ease-in-out' }} />
+                            <circle cx="42" cy="75" r="1.5" fill="#ffffff" />
+                          </g>
+                          <text x="22" y="77" fill={answers.navicularTenderness ? "#ef4444" : "#cbd5e1"} fontSize="5.2" fontWeight="bold" textAnchor="end" style={{ userSelect: 'none' }}>
+                            {lang === 'hi' ? 'भीतरी जोड़' : lang === 'hn' ? 'Andar ka joint' : 'Inner Arch'}
+                          </text>
+                        </svg>
+                      </div>
+
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                        <div style={{ fontSize: '0.9rem', fontWeight: 600 }}>{labels.header}</div>
+                        <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
+                          <input type="checkbox" checked={answers.fifthMetatarsalTenderness} onChange={(e) => handleAnswerChange('fifthMetatarsalTenderness', e.target.checked)} />
+                          {labels.fifthMetatarsal}
+                        </label>
+                        <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
+                          <input type="checkbox" checked={answers.navicularTenderness} onChange={(e) => handleAnswerChange('navicularTenderness', e.target.checked)} />
+                          {labels.navicular}
+                        </label>
+                        <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
+                          <input type="checkbox" checked={!answers.canWalkImmediately} onChange={(e) => handleAnswerChange('canWalkImmediately', !e.target.checked)} />
+                          {labels.walkImmediately}
+                        </label>
+                      </div>
                     </div>
-                  </div>
-                )}
+                  )}
 
-                {/* FOOT */}
-                {injuryArea === 'foot' && (
-                  <div className="joint-assessment-grid">
-                    <div style={{ display: 'flex', justifyContent: 'center' }}>
-                      <svg width="200" height="200" viewBox="0 0 100 100" style={{ background: 'rgba(255,255,255,0.02)', borderRadius: '12px', border: '1px dashed var(--border)' }}>
-                        <path d="M25 40 Q40 30 75 40 T85 70 T50 85 T25 40 Z" fill="rgba(255,255,255,0.1)" stroke="#555" strokeWidth="1" />
-                        
-                        <circle 
-                          cx="72" 
-                          cy="55" 
-                          r="6" 
-                          fill={answers.fifthMetatarsalTenderness ? "var(--color-high)" : "rgba(59, 130, 246, 0.4)"} 
-                          stroke={answers.fifthMetatarsalTenderness ? "#fff" : "none"}
-                          strokeWidth="1"
-                          style={{ cursor: 'pointer' }}
-                          onClick={() => handleAnswerChange('fifthMetatarsalTenderness', !answers.fifthMetatarsalTenderness)}
-                        />
-                        <text x="75" y="65" fill={answers.fifthMetatarsalTenderness ? "var(--color-high)" : "#888"} fontSize="4.5" fontWeight="bold">5th Metatarsal</text>
+                  {/* KNEE */}
+                  {injuryArea === 'knee' && (
+                    <div className="joint-assessment-grid">
+                      <div style={{ display: 'flex', justifyContent: 'center' }}>
+                        <svg width="240" height="240" viewBox="0 0 120 120" style={{ background: 'rgba(15, 23, 42, 0.75)', borderRadius: '16px', border: '1px solid rgba(255,255,255,0.12)', boxShadow: '0 8px 32px rgba(0,0,0,0.5)', padding: '8px' }}>
+                          <defs>
+                            <linearGradient id="premiumBoneGradKnee" x1="0%" y1="0%" x2="100%" y2="100%">
+                              <stop offset="0%" stopColor="#ffffff" stopOpacity="0.95" />
+                              <stop offset="60%" stopColor="#f8fafc" stopOpacity="0.85" />
+                              <stop offset="100%" stopColor="#cbd5e1" stopOpacity="0.5" />
+                            </linearGradient>
+                            <radialGradient id="jointGlowKnee" cx="50%" cy="50%" r="50%">
+                              <stop offset="0%" stopColor="rgba(0, 194, 168, 0.2)" />
+                              <stop offset="100%" stopColor="rgba(15, 23, 42, 0)" />
+                            </radialGradient>
+                          </defs>
 
-                        <circle 
-                          cx="38" 
-                          cy="50" 
-                          r="6" 
-                          fill={answers.navicularTenderness ? "var(--color-high)" : "rgba(59, 130, 246, 0.4)"} 
-                          stroke={answers.navicularTenderness ? "#fff" : "none"}
-                          strokeWidth="1"
-                          style={{ cursor: 'pointer' }}
-                          onClick={() => handleAnswerChange('navicularTenderness', !answers.navicularTenderness)}
-                        />
-                        <text x="12" y="52" fill={answers.navicularTenderness ? "var(--color-high)" : "#888"} fontSize="4.5" fontWeight="bold">Navicular</text>
-                      </svg>
+                          {/* Soft background joint glow */}
+                          <circle cx="60" cy="60" r="50" fill="url(#jointGlowKnee)" />
+
+                          {/* Background Leg Outline */}
+                          <path d="M 40 5 C 40 5, 38 40, 32 50 C 26 60, 26 70, 34 80 C 40 88, 42 115, 42 115 L 78 115 C 78 115, 80 88, 86 80 C 94 70, 94 60, 88 50 C 82 40, 80 5, 80 5 Z" fill="rgba(255, 255, 255, 0.02)" stroke="rgba(255,255,255,0.06)" strokeWidth="1" />
+
+                          {/* Femur (Thigh Bone) */}
+                          <path d="M 48 5 L 48 48 C 48 55, 38 56, 38 62 C 38 66, 48 66, 52 65 C 55 64, 58 64, 61 65 C 65 66, 75 66, 75 62 C 75 56, 65 55, 65 48 L 65 5 Z" fill="url(#premiumBoneGradKnee)" stroke="rgba(255,255,255,0.3)" strokeWidth="1" />
+                          
+                          {/* Tibia (Shin Bone) */}
+                          <path d="M 46 72 C 46 70, 68 70, 68 72 L 64 115 L 50 115 Z" fill="url(#premiumBoneGradKnee)" stroke="rgba(255,255,255,0.3)" strokeWidth="1" />
+                          
+                          {/* Fibula (Thin Outer Bone) */}
+                          <path d="M 72 75 C 72 73, 78 74, 76 82 L 72 115 L 68 115 L 70 82 Z" fill="url(#premiumBoneGradKnee)" stroke="rgba(255,255,255,0.25)" strokeWidth="0.8" />
+
+                          {/* Patella (Floating Kneecap) - layered bone */}
+                          <path d="M 54 48 C 45 48, 43 63, 54 65 C 65 63, 63 48, 54 48 Z" fill="url(#premiumBoneGradKnee)" stroke="rgba(255,255,255,0.35)" strokeWidth="1" />
+
+                          {/* Clinical Labels and Dashed Pointer lines */}
+                          {/* Femur Pointer */}
+                          <line x1="54" y1="25" x2="25" y2="25" stroke="rgba(255, 255, 255, 0.4)" strokeWidth="0.8" strokeDasharray="2" />
+                          <circle cx="54" cy="25" r="1.5" fill="#ffffff" />
+                          <text x="22" y="27" fill="#94a3b8" fontSize="4.5" textAnchor="end" style={{ userSelect: 'none', fontWeight: 500 }}>Femur</text>
+
+                          {/* Tibia Pointer */}
+                          <line x1="56" y1="92" x2="25" y2="92" stroke="rgba(255, 255, 255, 0.4)" strokeWidth="0.8" strokeDasharray="2" />
+                          <circle cx="56" cy="92" r="1.5" fill="#ffffff" />
+                          <text x="22" y="94" fill="#94a3b8" fontSize="4.5" textAnchor="end" style={{ userSelect: 'none', fontWeight: 500 }}>Tibia</text>
+
+                          {/* Interactive Hotspot 1: Patella (Kneecap) */}
+                          <g onClick={() => handleAnswerChange('patellarTenderness', !answers.patellarTenderness)} style={{ cursor: 'pointer' }}>
+                            <line x1="54" y1="58" x2="88" y2="58" stroke={answers.patellarTenderness ? "#ef4444" : "rgba(255, 255, 255, 0.4)"} strokeWidth="0.8" strokeDasharray="2" />
+                            <circle cx="54" cy="58" r="11" fill="none" stroke={answers.patellarTenderness ? "#ef4444" : "#38bdf8"} strokeWidth="1.2" strokeOpacity={answers.patellarTenderness ? "0.4" : "0.25"}>
+                              {!answers.patellarTenderness && (
+                                <animate attributeName="r" values="6;12;6" dur="3s" repeatCount="indefinite" />
+                              )}
+                              {!answers.patellarTenderness && (
+                                <animate attributeName="stroke-opacity" values="0.8;0;0.8" dur="3s" repeatCount="indefinite" />
+                              )}
+                            </circle>
+                            <circle cx="54" cy="58" r={answers.patellarTenderness ? 7 : 5} fill={answers.patellarTenderness ? "#ef4444" : "rgba(56, 189, 248, 0.3)"} stroke={answers.patellarTenderness ? "#ffffff" : "#38bdf8"} strokeWidth="1.2" style={{ transition: 'all 0.2s ease-in-out' }} />
+                            <circle cx="54" cy="58" r="1.5" fill="#ffffff" />
+                          </g>
+                          <text x="91" y="60" fill={answers.patellarTenderness ? "#ef4444" : "#cbd5e1"} fontSize="5.2" fontWeight="bold" style={{ userSelect: 'none' }}>
+                            {lang === 'hi' ? 'घुटने की कटोरी' : lang === 'hn' ? 'Katori' : 'Kneecap'}
+                          </text>
+
+                          {/* Interactive Hotspot 2: Fibular Head (outer side bone) */}
+                          <g onClick={() => handleAnswerChange('fibularHeadTenderness', !answers.fibularHeadTenderness)} style={{ cursor: 'pointer' }}>
+                            <line x1="69" y1="76" x2="88" y2="76" stroke={answers.fibularHeadTenderness ? "#ef4444" : "rgba(255, 255, 255, 0.4)"} strokeWidth="0.8" strokeDasharray="2" />
+                            <circle cx="69" cy="76" r="10" fill="none" stroke={answers.fibularHeadTenderness ? "#ef4444" : "#38bdf8"} strokeWidth="1.2" strokeOpacity={answers.fibularHeadTenderness ? "0.4" : "0.25"}>
+                              {!answers.fibularHeadTenderness && (
+                                <animate attributeName="r" values="5;11;5" dur="3s" repeatCount="indefinite" />
+                              )}
+                              {!answers.fibularHeadTenderness && (
+                                <animate attributeName="stroke-opacity" values="0.8;0;0.8" dur="3s" repeatCount="indefinite" />
+                              )}
+                            </circle>
+                            <circle cx="69" cy="76" r={answers.fibularHeadTenderness ? 6.5 : 4.5} fill={answers.fibularHeadTenderness ? "#ef4444" : "rgba(56, 189, 248, 0.3)"} stroke={answers.fibularHeadTenderness ? "#ffffff" : "#38bdf8"} strokeWidth="1.2" style={{ transition: 'all 0.2s ease-in-out' }} />
+                            <circle cx="69" cy="76" r="1.5" fill="#ffffff" />
+                          </g>
+                          <text x="91" y="78" fill={answers.fibularHeadTenderness ? "#ef4444" : "#cbd5e1"} fontSize="5.2" fontWeight="bold" style={{ userSelect: 'none' }}>
+                            {lang === 'hi' ? 'बाहरी निचली हड्डी' : lang === 'hn' ? 'Bahar ki Lower haddi' : 'Outer Lower Bone'}
+                          </text>
+                        </svg>
+                      </div>
+
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                        <div style={{ fontSize: '0.9rem', fontWeight: 600 }}>{labels.header}</div>
+                        <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
+                          <input type="checkbox" checked={answers.patellarTenderness} onChange={(e) => handleAnswerChange('patellarTenderness', e.target.checked)} />
+                          {labels.patellar}
+                        </label>
+                        <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
+                          <input type="checkbox" checked={answers.fibularHeadTenderness} onChange={(e) => handleAnswerChange('fibularHeadTenderness', e.target.checked)} />
+                          {labels.fibularHead}
+                        </label>
+                        <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
+                          <input type="checkbox" checked={!answers.kneeFlexion90} onChange={(e) => handleAnswerChange('kneeFlexion90', !e.target.checked)} />
+                          {labels.flexion90}
+                        </label>
+                      </div>
                     </div>
+                  )}
 
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-                      <div style={{ fontSize: '0.9rem', fontWeight: 600 }}>{lang === 'hi' ? 'पैर के नियम:' : 'Ottawa Foot Rules Questions:'}</div>
-                      <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
-                        <input type="checkbox" checked={answers.fifthMetatarsalTenderness} onChange={(e) => handleAnswerChange('fifthMetatarsalTenderness', e.target.checked)} />
-                        {lang === 'hi' ? "पैर के बाहरी किनारे (5th Metatarsal) पर छूने पर दर्द" : "Tenderness at 5th Metatarsal base"}
-                      </label>
-                      <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
-                        <input type="checkbox" checked={answers.navicularTenderness} onChange={(e) => handleAnswerChange('navicularTenderness', e.target.checked)} />
-                        {lang === 'hi' ? "पैर की भीतरी नौकाकार हड्डी (Navicular) पर दर्द" : "Tenderness at Navicular bone"}
-                      </label>
-                      <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
-                        <input type="checkbox" checked={!answers.canWalkImmediately} onChange={(e) => handleAnswerChange('canWalkImmediately', !e.target.checked)} />
-                        {lang === 'hi' ? "चोट के तुरंत बाद 4 कदम चलने में असमर्थ" : "Unable to walk 4 steps immediately"}
-                      </label>
+                  {/* WRIST */}
+                  {injuryArea === 'wrist' && (
+                    <div className="joint-assessment-grid">
+                      <div style={{ display: 'flex', justifyContent: 'center' }}>
+                        <svg width="240" height="240" viewBox="0 0 120 120" style={{ background: 'rgba(15, 23, 42, 0.75)', borderRadius: '16px', border: '1px solid rgba(255,255,255,0.12)', boxShadow: '0 8px 32px rgba(0,0,0,0.5)', padding: '8px' }}>
+                          <defs>
+                            <linearGradient id="premiumBoneGradWrist" x1="0%" y1="0%" x2="100%" y2="100%">
+                              <stop offset="0%" stopColor="#ffffff" stopOpacity="0.95" />
+                              <stop offset="60%" stopColor="#f8fafc" stopOpacity="0.85" />
+                              <stop offset="100%" stopColor="#cbd5e1" stopOpacity="0.5" />
+                            </linearGradient>
+                            <radialGradient id="jointGlowWrist" cx="50%" cy="50%" r="50%">
+                              <stop offset="0%" stopColor="rgba(0, 194, 168, 0.2)" />
+                              <stop offset="100%" stopColor="rgba(15, 23, 42, 0)" />
+                            </radialGradient>
+                          </defs>
+
+                          {/* Soft background joint glow */}
+                          <circle cx="60" cy="60" r="50" fill="url(#jointGlowWrist)" />
+
+                          {/* Background Hand Outline */}
+                          <path d="M 40 115 L 40 95 C 40 91, 31 88, 24 81 C 17 74, 12 67, 14 60 C 16 55, 22 55, 26 61 C 31 67, 34 70, 36 67 C 38 64, 34 42, 34 27 C 34 22, 39 22, 39 27 L 41 64 C 41 67, 48 67, 48 64 L 50 17 C 50 12, 55 12, 55 17 L 56 64 C 56 67, 63 67, 63 64 L 64 20 C 64 15, 69 15, 69 20 L 70 65 C 70 68, 77 68, 77 65 L 79 32 C 79 27, 84 27, 84 32 L 85 70 C 85 80, 81 92, 81 98 L 81 115 Z" fill="rgba(255, 255, 255, 0.02)" stroke="rgba(255,255,255,0.06)" strokeWidth="1" />
+
+                          {/* Forearm Radius (Thumb side, left) */}
+                          <path d="M 38 94 L 38 115 C 38 115, 52 115, 52 115 L 52 94 Z" fill="url(#premiumBoneGradWrist)" stroke="rgba(255,255,255,0.25)" strokeWidth="0.8" />
+                          
+                          {/* Forearm Ulna (Pinky side, right) */}
+                          <path d="M 58 95 L 58 115 C 58 115, 72 115, 68 95 Z" fill="url(#premiumBoneGradWrist)" stroke="rgba(255,255,255,0.25)" strokeWidth="0.8" />
+
+                          {/* Carpal bones cluster */}
+                          {/* Scaphoid */}
+                          <path d="M 43 91 C 36 87, 28 83, 33 77 C 38 73, 46 79, 47 87 Z" fill="url(#premiumBoneGradWrist)" stroke="rgba(255,255,255,0.3)" strokeWidth="0.8" />
+                          {/* Lunate */}
+                          <path d="M 51 90 C 49 87, 56 85, 58 89 Z" fill="url(#premiumBoneGradWrist)" stroke="rgba(255,255,255,0.2)" strokeWidth="0.6" />
+                          {/* Triquetrum */}
+                          <path d="M 60 91 C 58 88, 65 86, 66 90 Z" fill="url(#premiumBoneGradWrist)" stroke="rgba(255,255,255,0.2)" strokeWidth="0.6" />
+                          {/* Pisiform */}
+                          <path d="M 64 89 C 63 87, 68 85, 69 87 Z" fill="url(#premiumBoneGradWrist)" stroke="rgba(255,255,255,0.2)" strokeWidth="0.6" />
+                          {/* Trapezium & Trapezoid */}
+                          <path d="M 35 77 C 33 75, 40 71, 42 74 Z" fill="url(#premiumBoneGradWrist)" stroke="rgba(255,255,255,0.2)" strokeWidth="0.6" />
+                          {/* Capitate & Hamate */}
+                          <path d="M 51 85 C 47 79, 62 77, 64 83 Z" fill="url(#premiumBoneGradWrist)" stroke="rgba(255,255,255,0.2)" strokeWidth="0.6" />
+
+                          {/* Metacarpals */}
+                          <path d="M 30 73 L 18 61 M 42 74 L 35 34 M 48 75 L 48 25 M 54 76 L 61 27 M 60 78 L 74 41" stroke="rgba(255,255,255,0.35)" strokeWidth="1" fill="none" />
+
+                          {/* Clinical Labels and Dashed Pointer lines */}
+                          {/* Radius Pointer */}
+                          <line x1="45" y1="105" x2="25" y2="105" stroke="rgba(255, 255, 255, 0.4)" strokeWidth="0.8" strokeDasharray="2" />
+                          <circle cx="45" cy="105" r="1.5" fill="#ffffff" />
+                          <text x="22" y="107" fill="#94a3b8" fontSize="4.5" textAnchor="end" style={{ userSelect: 'none', fontWeight: 500 }}>Radius</text>
+
+                          {/* Ulna Pointer */}
+                          <line x1="65" y1="105" x2="88" y2="105" stroke="rgba(255, 255, 255, 0.4)" strokeWidth="0.8" strokeDasharray="2" />
+                          <circle cx="65" cy="105" r="1.5" fill="#ffffff" />
+                          <text x="91" y="107" fill="#94a3b8" fontSize="4.5" style={{ userSelect: 'none', fontWeight: 500 }}>Ulna</text>
+
+                          {/* Interactive Hotspot 1: Snuffbox (base of thumb) */}
+                          <g onClick={() => handleAnswerChange('snuffboxTenderness', !answers.snuffboxTenderness)} style={{ cursor: 'pointer' }}>
+                            <line x1="32" y1="82" x2="25" y2="82" stroke={answers.snuffboxTenderness ? "#ef4444" : "rgba(255, 255, 255, 0.4)"} strokeWidth="0.8" strokeDasharray="2" />
+                            <circle cx="32" cy="82" r="10" fill="none" stroke={answers.snuffboxTenderness ? "#ef4444" : "#38bdf8"} strokeWidth="1.2" strokeOpacity={answers.snuffboxTenderness ? "0.4" : "0.25"}>
+                              {!answers.snuffboxTenderness && (
+                                <animate attributeName="r" values="5;11;5" dur="3s" repeatCount="indefinite" />
+                              )}
+                              {!answers.snuffboxTenderness && (
+                                <animate attributeName="stroke-opacity" values="0.8;0;0.8" dur="3s" repeatCount="indefinite" />
+                              )}
+                            </circle>
+                            <circle cx="32" cy="82" r={answers.snuffboxTenderness ? 6.5 : 4.5} fill={answers.snuffboxTenderness ? "#ef4444" : "rgba(56, 189, 248, 0.3)"} stroke={answers.snuffboxTenderness ? "#ffffff" : "#38bdf8"} strokeWidth="1.2" style={{ transition: 'all 0.2s ease-in-out' }} />
+                            <circle cx="32" cy="82" r="1.5" fill="#ffffff" />
+                          </g>
+                          <text x="22" y="84" fill={answers.snuffboxTenderness ? "#ef4444" : "#cbd5e1"} fontSize="5.2" fontWeight="bold" textAnchor="end" style={{ userSelect: 'none' }}>
+                            {lang === 'hi' ? 'अंगूठे का गड्ढा' : lang === 'hn' ? 'Snuffbox Gadda' : 'Thumb Groove'}
+                          </text>
+
+                          {/* Interactive Hotspot 2: Scaphoid Tubercle (front palm side under thumb) */}
+                          <g onClick={() => handleAnswerChange('scaphoidTubercleTenderness', !answers.scaphoidTubercleTenderness)} style={{ cursor: 'pointer' }}>
+                            <line x1="47" y1="87" x2="88" y2="87" stroke={answers.scaphoidTubercleTenderness ? "#ef4444" : "rgba(255, 255, 255, 0.4)"} strokeWidth="0.8" strokeDasharray="2" />
+                            <circle cx="47" cy="87" r="10" fill="none" stroke={answers.scaphoidTubercleTenderness ? "#ef4444" : "#38bdf8"} strokeWidth="1.2" strokeOpacity={answers.scaphoidTubercleTenderness ? "0.4" : "0.25"}>
+                              {!answers.scaphoidTubercleTenderness && (
+                                <animate attributeName="r" values="5;11;5" dur="3s" repeatCount="indefinite" />
+                              )}
+                              {!answers.scaphoidTubercleTenderness && (
+                                <animate attributeName="stroke-opacity" values="0.8;0;0.8" dur="3s" repeatCount="indefinite" />
+                              )}
+                            </circle>
+                            <circle cx="47" cy="87" r={answers.scaphoidTubercleTenderness ? 6.5 : 4.5} fill={answers.scaphoidTubercleTenderness ? "#ef4444" : "rgba(56, 189, 248, 0.3)"} stroke={answers.scaphoidTubercleTenderness ? "#ffffff" : "#38bdf8"} strokeWidth="1.2" style={{ transition: 'all 0.2s ease-in-out' }} />
+                            <circle cx="47" cy="87" r="1.5" fill="#ffffff" />
+                          </g>
+                          <text x="91" y="89" fill={answers.scaphoidTubercleTenderness ? "#ef4444" : "#cbd5e1"} fontSize="5.2" fontWeight="bold" style={{ userSelect: 'none' }}>
+                            {lang === 'hi' ? 'कलाई की हड्डी' : lang === 'hn' ? 'Hatheli ki haddi' : 'Wrist Bone'}
+                          </text>
+                        </svg>
+                      </div>
+
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                        <div style={{ fontSize: '0.9rem', fontWeight: 600 }}>{labels.header}</div>
+                        <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
+                          <input type="checkbox" checked={answers.snuffboxTenderness} onChange={(e) => handleAnswerChange('snuffboxTenderness', e.target.checked)} />
+                          {labels.snuffbox}
+                        </label>
+                        <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
+                          <input type="checkbox" checked={answers.scaphoidTubercleTenderness} onChange={(e) => handleAnswerChange('scaphoidTubercleTenderness', e.target.checked)} />
+                          {labels.tubercle}
+                        </label>
+                      </div>
                     </div>
-                  </div>
-                )}
-
-                {/* KNEE */}
-                {injuryArea === 'knee' && (
-                  <div className="joint-assessment-grid">
-                    <div style={{ display: 'flex', justifyContent: 'center' }}>
-                      <svg width="200" height="200" viewBox="0 0 100 100" style={{ background: 'rgba(255,255,255,0.02)', borderRadius: '12px', border: '1px dashed var(--border)' }}>
-                        <rect x="40" y="10" width="20" height="30" rx="3" fill="rgba(255,255,255,0.1)" stroke="#555" />
-                        <rect x="40" y="60" width="20" height="30" rx="3" fill="rgba(255,255,255,0.1)" stroke="#555" />
-                        
-                        <circle 
-                          cx="50" 
-                          cy="48" 
-                          r="8" 
-                          fill={answers.patellarTenderness ? "var(--color-high)" : "rgba(59, 130, 246, 0.4)"} 
-                          stroke={answers.patellarTenderness ? "#fff" : "none"}
-                          strokeWidth="1"
-                          style={{ cursor: 'pointer' }}
-                          onClick={() => handleAnswerChange('patellarTenderness', !answers.patellarTenderness)}
-                        />
-                        <text x="62" y="50" fill={answers.patellarTenderness ? "var(--color-high)" : "#888"} fontSize="4.5" fontWeight="bold">Patella</text>
-
-                        <circle 
-                          cx="63" 
-                          cy="65" 
-                          r="6" 
-                          fill={answers.fibularHeadTenderness ? "var(--color-high)" : "rgba(59, 130, 246, 0.4)"} 
-                          stroke={answers.fibularHeadTenderness ? "#fff" : "none"}
-                          strokeWidth="1"
-                          style={{ cursor: 'pointer' }}
-                          onClick={() => handleAnswerChange('fibularHeadTenderness', !answers.fibularHeadTenderness)}
-                        />
-                        <text x="68" y="72" fill={answers.fibularHeadTenderness ? "var(--color-high)" : "#888"} fontSize="4" fontWeight="bold">Fibula</text>
-                      </svg>
-                    </div>
-
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-                      <div style={{ fontSize: '0.9rem', fontWeight: 600 }}>{lang === 'hi' ? 'घुटने के नियम:' : 'Ottawa Knee Rules Questions:'}</div>
-                      <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
-                        <input type="checkbox" checked={answers.patellarTenderness} onChange={(e) => handleAnswerChange('patellarTenderness', e.target.checked)} />
-                        {lang === 'hi' ? "घुटने की चक्की (Patella) पर छूने पर दर्द" : "Isolated tenderness of the Patella"}
-                      </label>
-                      <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
-                        <input type="checkbox" checked={answers.fibularHeadTenderness} onChange={(e) => handleAnswerChange('fibularHeadTenderness', e.target.checked)} />
-                        {lang === 'hi' ? "घुटने के बाहरी तरफ निचली हड्डी (Fibular Head) पर दर्द" : "Tenderness at Fibular Head"}
-                      </label>
-                      <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
-                        <input type="checkbox" checked={!answers.kneeFlexion90} onChange={(e) => handleAnswerChange('kneeFlexion90', !e.target.checked)} />
-                        {lang === 'hi' ? "घुटने को 90 डिग्री मोड़ने में असमर्थ" : "Unable to flex knee to 90 degrees"}
-                      </label>
-                    </div>
-                  </div>
-                )}
-
-                {/* WRIST */}
-                {injuryArea === 'wrist' && (
-                  <div className="joint-assessment-grid">
-                    <div style={{ display: 'flex', justifyContent: 'center' }}>
-                      <svg width="200" height="200" viewBox="0 0 100 100" style={{ background: 'rgba(255,255,255,0.02)', borderRadius: '12px', border: '1px dashed var(--border)' }}>
-                        <path d="M40 70 L40 50 Q30 40 30 20 L70 20 Q70 40 60 50 L60 70 Z" fill="rgba(255,255,255,0.1)" stroke="#555" />
-                        
-                        <circle 
-                          cx="36" 
-                          cy="46" 
-                          r="6" 
-                          fill={answers.snuffboxTenderness ? "var(--color-high)" : "rgba(59, 130, 246, 0.4)"} 
-                          stroke={answers.snuffboxTenderness ? "#fff" : "none"}
-                          strokeWidth="1"
-                          style={{ cursor: 'pointer' }}
-                          onClick={() => handleAnswerChange('snuffboxTenderness', !answers.snuffboxTenderness)}
-                        />
-                        <text x="12" y="48" fill={answers.snuffboxTenderness ? "var(--color-high)" : "#888"} fontSize="4.5" fontWeight="bold">Snuffbox</text>
-
-                        <circle 
-                          cx="46" 
-                          cy="56" 
-                          r="6" 
-                          fill={answers.scaphoidTubercleTenderness ? "var(--color-high)" : "rgba(59, 130, 246, 0.4)"} 
-                          stroke={answers.scaphoidTubercleTenderness ? "#fff" : "none"}
-                          strokeWidth="1"
-                          style={{ cursor: 'pointer' }}
-                          onClick={() => handleAnswerChange('scaphoidTubercleTenderness', !answers.scaphoidTubercleTenderness)}
-                        />
-                        <text x="54" y="60" fill={answers.scaphoidTubercleTenderness ? "var(--color-high)" : "#888"} fontSize="4" fontWeight="bold">Tubercle</text>
-                      </svg>
-                    </div>
-
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-                      <div style={{ fontSize: '0.9rem', fontWeight: 600 }}>{lang === 'hi' ? 'कलाई (Scaphoid) की जांच:' : 'Scaphoid Fracture Checks:'}</div>
-                      <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
-                        <input type="checkbox" checked={answers.snuffboxTenderness} onChange={(e) => handleAnswerChange('snuffboxTenderness', e.target.checked)} />
-                        {lang === 'hi' ? "अंगूठे के निचले गड्ढे (Snuffbox) में छूने पर दर्द" : "Anatomical Snuffbox tenderness"}
-                      </label>
-                      <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
-                        <input type="checkbox" checked={answers.scaphoidTubercleTenderness} onChange={(e) => handleAnswerChange('scaphoidTubercleTenderness', e.target.checked)} />
-                        {lang === 'hi' ? "कलाई के आगे की हड्डी (Scaphoid Tubercle) पर दर्द" : "Scaphoid Tubercle tenderness"}
-                      </label>
-                    </div>
-                  </div>
-                )}
-              </div>
-            )}
+                  )}
+                </div>
+              );
+            })()}
 
             {/* STEP 6: MOBILITY & FUNCTION */}
             {currentStep === 6 && (
@@ -3153,8 +3589,11 @@ Return your response strictly in the following JSON format:
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
                   <label style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', cursor: 'pointer', fontSize: '1.05rem', fontWeight: 600 }}>
                     <input 
+                      key="redflag_boneProtruding"
+                      id="redflag_boneProtruding"
+                      name="redflag_boneProtruding"
                       type="checkbox" 
-                      checked={answers.boneProtruding}
+                      checked={answers.boneProtruding === true}
                       onChange={(e) => handleAnswerChange('boneProtruding', e.target.checked)}
                     />
                     {lang === 'hi' ? "क्या कोई हड्डी त्वचा से बाहर निकली हुई है?" : "Is a bone protruding/piercing through the skin?"}
@@ -3162,8 +3601,11 @@ Return your response strictly in the following JSON format:
 
                   <label style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', cursor: 'pointer', fontSize: '1.05rem', fontWeight: 600 }}>
                     <input 
+                      key="redflag_numbnessBelow"
+                      id="redflag_numbnessBelow"
+                      name="redflag_numbnessBelow"
                       type="checkbox" 
-                      checked={answers.numbnessBelow}
+                      checked={answers.numbnessBelow === true}
                       onChange={(e) => handleAnswerChange('numbnessBelow', e.target.checked)}
                     />
                     {lang === 'hi' ? "क्या चोटिल स्थान के नीचे सुन्नता या झुनझुनी महसूस हो रही है?" : "Is there numbness, tingling, or pins and needles below?"}
@@ -3171,8 +3613,11 @@ Return your response strictly in the following JSON format:
 
                   <label style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', cursor: 'pointer', fontSize: '1.05rem', fontWeight: 600 }}>
                     <input 
+                      key="redflag_blueColdBelow"
+                      id="redflag_blueColdBelow"
+                      name="redflag_blueColdBelow"
                       type="checkbox" 
-                      checked={answers.blueColdBelow}
+                      checked={answers.blueColdBelow === true}
                       onChange={(e) => handleAnswerChange('blueColdBelow', e.target.checked)}
                     />
                     {lang === 'hi' ? "क्या हाथ/पैर की उंगलियां नीली, पीली या ठंडी पड़ गई हैं?" : "Are the fingers/toes pale, blue, or cold to touch?"}
@@ -3180,8 +3625,11 @@ Return your response strictly in the following JSON format:
 
                   <label style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', cursor: 'pointer', fontSize: '1.05rem', fontWeight: 600 }}>
                     <input 
+                      key="redflag_unrelivedPain"
+                      id="redflag_unrelivedPain"
+                      name="redflag_unrelivedPain"
                       type="checkbox" 
-                      checked={answers.unrelivedPain}
+                      checked={answers.unrelivedPain === true}
                       onChange={(e) => handleAnswerChange('unrelivedPain', e.target.checked)}
                     />
                     {lang === 'hi' ? "क्या असहनीय दर्द है जो आराम करने या दवा खाने से भी कम नहीं हो रहा?" : "Is there severe, constant pain not relieved by resting?"}
