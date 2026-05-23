@@ -1,0 +1,4257 @@
+import React, { useState, useEffect, useRef } from 'react';
+import { 
+  Activity, 
+  AlertTriangle, 
+  ShieldAlert, 
+  History as HistoryIcon, 
+  User, 
+  CheckCircle2, 
+  ChevronRight, 
+  ChevronLeft, 
+  RefreshCw, 
+  Eye, 
+  Trash2, 
+  Shield, 
+  Moon, 
+  Sun, 
+  Clock, 
+  Heart, 
+  PhoneCall, 
+  Check, 
+  UploadCloud, 
+  Info,
+  Calendar,
+  AlertOctagon,
+  FileText,
+  MessageSquare,
+  X,
+  Send,
+  Globe,
+  Mic,
+  MicOff,
+  Volume2,
+  VolumeX,
+  Settings
+} from 'lucide-react';
+
+// --- TRILINGUAL TRANSLATION DICTIONARY ---
+const TRANSLATIONS = {
+  en: {
+    welcome: "Welcome, Karan 👋",
+    appSub: "InjuryIQ is your AI-assisted clinical triage tool. Assess sports, domestic, or accidental injuries instantly using evidence-based medical rules.",
+    startNew: "Start New Injury Assessment",
+    viewRecords: "View Assessment Records",
+    recentAssessments: "Recent Assessments",
+    noAssessments: "No assessments recorded yet.",
+    riceCompanion: "R.I.C.E. Recovery Companion",
+    iceTimerTitle: "Active Ice Compress Timer",
+    iceTimerSub: "Standard medical cold compress recommendation: 20 minutes limit.",
+    disclaimerTitle: "Safety & Medical Disclaimer",
+    disclaimerIntro: "IMPORTANT: InjuryIQ is an AI-assisted clinical triage tool designed to estimate injury risk using symptom logic (such as the Ottawa Ankle Rules).",
+    disclaimerPoints: [
+      "This is NOT a Medical Diagnosis: This app does not replace a physical examination or professional diagnosis by a qualified orthopedic doctor.",
+      "Exclusion Criteria: Do not rely on this triage system if the patient is under 18 years old, intoxicated, has multiple major trauma wounds, or diminished nerve sensation.",
+      "Emergencies: If you suspect open fractures, bone protrusions, or extreme blood loss, skip this checklist and visit the nearest Emergency Room immediately."
+    ],
+    acceptDisclaimer: "I Understand, Acknowledge & Accept",
+    cancel: "Cancel",
+    abort: "Abort",
+    step: "Step",
+    of: "of",
+    injuryLocationQuestion: "Where is the injury located?",
+    selectJointSubtitle: "Please select the joint area that was impacted.",
+    ageLabel: "What is the patient's age?",
+    ageWarning: "Note: Ottawa Rules are not fully validated for pediatric patients under 18 years.",
+    timelineLabel: "When did the injury happen?",
+    mechanismLabel: "How did the injury occur?",
+    soundLabel: "Did you hear any sound at the moment of injury?",
+    painSliderLabel: "Current pain level (0 to 10):",
+    painTypeLabel: "Type of pain:",
+    painReliefLabel: "Does pain medicine help?",
+    painIncreasesLabel: "When does the pain increase? (Select all that apply)",
+    swellingLabel: "Swelling (Sujan):",
+    bruisingLabel: "Bruising (Neel padna):",
+    deformityLabel: "Is there a visible deformity?",
+    deformitySub: "Does the joint look bent, crooked, or clearly misshapen compared to the other side?",
+    skinColorLabel: "Skin Color Changes below injury:",
+    skinTightCheckbox: "Does the skin feel extremely tight, tense or rigid? (Sign of high pressure)",
+    redFlagsTitle: "Critical Red Flag Checklist",
+    redFlagsSub: "Please select if you are experiencing any of these high-emergency signals.",
+    aiUploadTitle: "AI Visual Assessment (Optional)",
+    aiUploadSub: "Upload a photo of your injury. Our simulated PyTorch model will validate visual swelling/bruising.",
+    analyzeButton: "Analyze Photo using PyTorch CNN",
+    generateReport: "Generate Triage Report",
+    back: "Back",
+    next: "Next",
+    backToRecords: "Back to Records",
+    deleteRecord: "Delete Record",
+    triageScore: "Triage Risk Factor Points",
+    explainableBreakdown: "Explainable Triage Breakdown",
+    breakdownSub: "Transparent breakdown showing the exact factors that contributed to your assessment score.",
+    finalScore: "Final Calculated Score",
+    actionableRecs: "Actionable Recommendations",
+    ottawaScreening: "Ottawa Rule Screening",
+    ottawaPositive: "POSITIVE: Inability to bear weight or local bone point tenderness detected. Triage guidelines state that a clinical X-ray evaluation is indicated to rule out fracture.",
+    ottawaNegative: "NEGATIVE: No specific bone tenderness at Ottawa test zones and weight-bearing intact. Fracture probability is statistically low.",
+    metadataTitle: "Assessment Metadata",
+    injuryLocation: "Injury Location",
+    injuryTimeline: "Injury Timeline",
+    timestamp: "Timestamp",
+    chatbotTitle: "InjuryIQ Voice Assistant",
+    chatbotWelcome: "Hello! I am your multilingual voice assistant. Ask me anything about injuries, or tap the Mic icon to speak in English, Hindi, or Hinglish.",
+    chatPlaceholder: "Ask or tap Mic to speak...",
+    lowRiskTitle: "Low Risk — Soft Tissue Injury Likely (Sprain)",
+    modRiskTitle: "Moderate Risk — Possible Sprain or Minor Crack",
+    highRiskTitle: "High Risk — High Fracture Probability"
+  },
+  hi: {
+    welcome: "स्वागत है, करन 👋",
+    appSub: "InjuryIQ आपका AI-सहायता प्राप्त क्लिनिकल ट्राइएज टूल है। साक्ष्य-आधारित चिकित्सा नियमों का उपयोग करके चोटों का तुरंत आकलन करें।",
+    startNew: "नया चोट मूल्यांकन शुरू करें",
+    viewRecords: "मूल्यांकन रिकॉर्ड देखें",
+    recentAssessments: "हाल के मूल्यांकन",
+    noAssessments: "अभी तक कोई मूल्यांकन दर्ज नहीं किया गया है।",
+    riceCompanion: "R.I.C.E. रिकवरी गाइड",
+    iceTimerTitle: "कोल्ड कंप्रेस आइस टाइमर",
+    iceTimerSub: "चिकित्सीय निर्देश: बर्फ केवल 15 से 20 मिनट के लिए ही लगाएं।",
+    disclaimerTitle: "सुरक्षा एवं चिकित्सा अस्वीकरण",
+    disclaimerIntro: "महत्वपूर्ण: InjuryIQ एक AI-सहायता प्राप्त ट्राइएज टूल है जिसे ओटावा रूल्स जैसे लक्षणों के आधार पर चोट के जोखिम का आकलन करने के लिए डिज़ाइन किया गया है।",
+    disclaimerPoints: [
+      "यह कोई मेडिकल निदान (Diagnosis) नहीं है: यह ऐप किसी योग्य डॉक्टर द्वारा शारीरिक परीक्षण या निदान का स्थान नहीं लेता है।",
+      "बाहरी मानदंड: यदि रोगी 18 वर्ष से कम उम्र का है, नशे में है, या गंभीर रूप से बेहोश है, तो इस ऐप का उपयोग न करें।",
+      "आपातकाल: यदि आपको खुली हड्डी या भारी रक्तस्राव का संदेह है, तो तुरंत नजदीकी आपातकालीन कक्ष (ER) में जाएं।"
+    ],
+    acceptDisclaimer: "मैं समझता हूँ और स्वीकार करता हूँ",
+    cancel: "रद्द करें",
+    abort: "रोकें",
+    step: "कदम",
+    of: "में से",
+    injuryLocationQuestion: "चोट शरीर के किस जोड़ पर लगी है?",
+    selectJointSubtitle: "कृपया प्रभावित जोड़ का चयन करें।",
+    ageLabel: "मरीज की उम्र क्या है?",
+    ageWarning: "ध्यान दें: 18 वर्ष से कम उम्र के बच्चों के लिए ओटावा नियम पूरी तरह मान्य नहीं हैं।",
+    timelineLabel: "चोट कब लगी थी?",
+    mechanismLabel: "चोट कैसे लगी?",
+    soundLabel: "चोट लगने के समय क्या कोई आवाज सुनाई दी थी?",
+    painSliderLabel: "दर्द का स्तर (0 से 10):",
+    painTypeLabel: "दर्द का प्रकार:",
+    painReliefLabel: "क्या दर्द की दवा से आराम मिलता है?",
+    painIncreasesLabel: "दर्द कब बढ़ता है? (सभी लागू विकल्प चुनें)",
+    swellingLabel: "सूजन (Sujan):",
+    bruisingLabel: "नील पड़ना (Bruising):",
+    deformityLabel: "क्या कोई दृश्य विकृति (टेढ़ापन) है?",
+    deformitySub: "क्या जोड़ दूसरी तरफ की तुलना में स्पष्ट रूप से टेढ़ा या विकृत दिखता है?",
+    skinColorLabel: "चोट के नीचे की त्वचा का रंग:",
+    skinTightCheckbox: "क्या त्वचा अत्यधिक तंग, तनावपूर्ण या कठोर महसूस होती है?",
+    redFlagsTitle: "महत्वपूर्ण रेड फ्लैग चेकलिस्ट",
+    redFlagsSub: "कृपया चुनें कि क्या आप इनमें से किसी भी आपातकालीन संकेत का अनुभव कर रहे हैं।",
+    aiUploadTitle: "AI विज़ुअल असेसमेंट (वैकल्पिक)",
+    aiUploadSub: "चोट की फोटो अपलोड करें। हमारा PyTorch मॉडल सूजन/नील का विज़ुअल सत्यापन करेगा।",
+    analyzeButton: "PyTorch CNN का उपयोग करके फोटो का विश्लेषण करें",
+    generateReport: "रिपोर्ट तैयार करें",
+    back: "पीछे",
+    next: "आगे",
+    backToRecords: "रिकॉर्ड पर वापस जाएं",
+    deleteRecord: "रिकॉर्ड हटाएं",
+    triageScore: "ट्राइएज जोखिम अंक",
+    explainableBreakdown: "जोखिम स्कोर का स्पष्ट विश्लेषण",
+    breakdownSub: "यह विश्लेषण दिखाता है कि आपके चोट के लक्षणों के आधार पर स्कोर कैसे बढ़ा है।",
+    finalScore: "अंतिम परिकलित स्कोर",
+    actionableRecs: "कार्रवाई योग्य सिफारिशें",
+    ottawaScreening: "ओटावा नियम स्क्रीनिंग स्थिति",
+    ottawaPositive: "सकारात्मक (POSITIVE): वजन उठाने में असमर्थता या हड्डी में दर्द। क्लिनिकल दिशानिर्देशों के अनुसार फ्रैक्चर की जांच के लिए एक्स-रे की आवश्यकता है।",
+    ottawaNegative: "नकारात्मक (NEGATIVE): ओटावा परीक्षण क्षेत्रों में कोई विशिष्ट हड्डी का दर्द नहीं है और वजन सहन करने की क्षमता बनी हुई है। फ्रैक्चर की संभावना कम है।",
+    metadataTitle: "मूल्यांकन की जानकारी",
+    injuryLocation: "चोट का स्थान",
+    injuryTimeline: "चोट का समय",
+    timestamp: "टाइमस्टैम्प",
+    chatbotTitle: "InjuryIQ आवाज़ सहायक",
+    chatbotWelcome: "नमस्ते! मैं आपका बहुभाषी आवाज़ सहायक हूँ। चोट के बारे में पूछने के लिए माइक बटन दबाकर हिन्दी, इंग्लिश या हिंग्लिश में बोलें।",
+    chatPlaceholder: "बोलने के लिए माइक दबाएं...",
+    lowRiskTitle: "कम जोखिम — मोच या सामान्य चोट की संभावना",
+    modRiskTitle: "मध्यम जोखिम — महत्वपूर्ण मोच या मामूली फ्रैक्चर की संभावना",
+    highRiskTitle: "उच्च जोखिम — फ्रैक्चर होने की अत्यधिक संभावना"
+  },
+  hn: { // Hinglish
+    welcome: "Welcome, Karan 👋",
+    appSub: "InjuryIQ aapka AI-assisted clinical triage tool hai. Sports, domestic, ya accidental injuries ko clinically assess karein in seconds.",
+    startNew: "Naya Injury Assessment Start Karein",
+    viewRecords: "Assessment Records Dekhein",
+    recentAssessments: "Recent Assessments",
+    noAssessments: "No assessments recorded yet.",
+    riceCompanion: "R.I.C.E. Recovery Companion",
+    iceTimerTitle: "Active Ice Compress Timer",
+    iceTimerSub: "Standard medical cold compress recommendation: 20 minutes limit.",
+    disclaimerTitle: "Safety & Medical Disclaimer",
+    disclaimerIntro: "IMPORTANT: InjuryIQ ek AI-assisted triage tool hai jo symptoms ke basis par fracture/sprain risk calculate karta hai.",
+    disclaimerPoints: [
+      "This is NOT a Medical Diagnosis: Yeh app doctor ke physical checkup ka substitute nahi hai.",
+      "Exclusion Criteria: Agar patient 18 years se chota hai, intoxicated hai, ya behosh hai toh iska use na karein.",
+      "Emergencies: Agar bone protruding (haddi bahar) hai ya heavy bleeding hai toh turant Emergency Room (ER) jayein."
+    ],
+    acceptDisclaimer: "I Understand, Acknowledge & Accept",
+    cancel: "Cancel",
+    abort: "Abort",
+    step: "Step",
+    of: "of",
+    injuryLocationQuestion: "Injury body ke kis joint par hui hai?",
+    selectJointSubtitle: "Please affected joint area ko select karein.",
+    ageLabel: "Patient ki age kya hai?",
+    ageWarning: "Note: 18 years se chote patients ke liye Ottawa Rules fully validated nahi hain.",
+    timelineLabel: "Injury kab hui thi?",
+    mechanismLabel: "Injury kaise hui?",
+    soundLabel: "Chot lagne ke time kya koi aawaz aayi thi?",
+    painSliderLabel: "Pain level kya hai (0 to 10):",
+    painTypeLabel: "Pain kis tarah ka hai?",
+    painReliefLabel: "Kya pain medicine se relief mil raha hai?",
+    painIncreasesLabel: "Pain kab badhta hai? (Check matching items)",
+    swellingLabel: "Swelling (Sujan):",
+    bruisingLabel: "Bruising (Neel padna):",
+    deformityLabel: "Kya joint me visible deformity (tedha-pan) hai?",
+    deformitySub: "Kya joint dusri side ke comparison me visibly crook/misshapen lag raha hai?",
+    skinColorLabel: "Injury area ke niche skin ka color kya hai?",
+    skinTightCheckbox: "Kya skin extreme tight, tense ya rigid lag rahi hai?",
+    redFlagsTitle: "Critical Red Flag Checklist",
+    redFlagsSub: "Immediate emergency signals check karein.",
+    aiUploadTitle: "AI Visual Assessment (Optional)",
+    aiUploadSub: "Injury area ki photo upload karein. PyTorch model swelling/bruising analyze karega.",
+    analyzeButton: "PyTorch CNN se photo analyze karein",
+    generateReport: "Triage Report Generate Karein",
+    back: "Back",
+    next: "Next",
+    backToRecords: "Records me wapas jayein",
+    deleteRecord: "Record Delete Karein",
+    triageScore: "Triage Risk Factor Points",
+    explainableBreakdown: "Explainable Triage Breakdown",
+    breakdownSub: "Yeh breakdown batata hai ki aapke symptoms ke points kaise add hue.",
+    finalScore: "Final Calculated Score",
+    actionableRecs: "Actionable Recommendations",
+    ottawaScreening: "Ottawa Rule Screening Result",
+    ottawaPositive: "POSITIVE: Inability to bear weight or local bone tenderness detected. Triage guidelines state that a clinical X-ray evaluation is indicated to rule out fracture.",
+    ottawaNegative: "NEGATIVE: No specific bone tenderness at Ottawa test zones and weight-bearing intact. Fracture probability is statistically low.",
+    metadataTitle: "Assessment Metadata",
+    injuryLocation: "Injury Location",
+    injuryTimeline: "Injury Timeline",
+    timestamp: "Timestamp",
+    chatbotTitle: "InjuryIQ Voice Assistant",
+    chatbotWelcome: "Hello! Main aapka AI voice assistant hoon. Sawaal poochne ke liye microphone button dabayein aur Hindi ya English me bolein.",
+    chatPlaceholder: "Kuch bolein ya type karein...",
+    lowRiskTitle: "Low Risk — Soft Tissue Injury Likely (Sprain)",
+    modRiskTitle: "Moderate Risk — Possible Sprain or Minor Crack",
+    highRiskTitle: "High Risk — High Fracture Probability"
+  }
+};
+
+// --- CHATBOT UNIFIED TRILINGUAL DATABASE ---
+const CHATBOT_TOPICS = [
+  {
+    id: "greetings",
+    keywords: [
+      "hello", "hi", "hey", "namaste", "greetings", "good morning", "good afternoon", "good evening", "hola",
+      "नमस्ते", "हैलो", "हाय", "राम राम"
+    ],
+    en: "Hello! I am here to help you triage your joint injuries (ankle, foot, knee, wrist). You can ask me about sprains vs. fractures, how to apply ice, the R.I.C.E. protocol, or pain relief. How can I help you today?",
+    hi: "नमस्ते! मैं आपके जोड़ की चोटों (टखना, पैर, घुटना, कलाई) के मूल्यांकन में मदद के लिए यहाँ हूँ। आप मुझसे मोच बनाम फ्रैक्चर, बर्फ लगाने के नियम, R.I.C.E. उपचार या दर्द निवारक दवाओं के बारे में पूछ सकते हैं। मैं आपकी क्या मदद कर सकता हूँ?",
+    hn: "Hello! Main aapki joint injuries (ankle, foot, knee, wrist) ke triage me help karne ke liye hoon. Aap mujhse sprain vs fracture, ice compress rules, R.I.C.E. protocol ya pain relief ke baare me pooch sakte hain. Kaise help karu aapki?"
+  },
+  {
+    id: "thanks",
+    keywords: [
+      "thanks", "thank you", "dhanyawad", "shukriya", "thankyou", "shukriyaa",
+      "धन्यवाद", "शुक्रिया"
+    ],
+    en: "You're welcome! Please remember to complete the injury assessment checklist on the dashboard for a full clinical triage report. Let me know if you have any other questions!",
+    hi: "आपका स्वागत है! कृपया पूर्ण ट्राइएज रिपोर्ट के लिए डैशबोर्ड पर चोट मूल्यांकन चेकलिस्ट को पूरा करें। यदि आपका कोई और सवाल है तो जरूर पूछें!",
+    hn: "You're welcome! Full triage report ke liye please dashboard par injury assessment checklist ko complete karein. Agar koi aur sawaal ho toh zaroor batayein!"
+  },
+  {
+    id: "sprain_vs_fracture",
+    keywords: [
+      "sprain", "fracture", "moch", "difference", "antar", "haddi", "ligament", "tutna", "crack", 
+      "मरोड़", "मोच", "फ्रैक्चर", "टूटना", "अंतर", "हड्डी", "fractur", "haddi tootna", "joint pain", "bone pain", "mochein"
+    ],
+    en: "A **sprain** (moch) is a stretch or tear of ligaments (tissues connecting bones). A **fracture** is a clean or partial break in the bone. \n\n* **Fractures** usually feature sharp localized bone pain, cracking sounds, visible deformity, and complete weight-bearing inability. \n* **Sprains** allow partial movement and have duller, spreading pain.",
+    hi: "मरोड़ या **मोच (Sprain)** लिगामेंट की चोट होती है जो हड्डियों को जोड़ती है, जबकि **फ्रैक्चर** हड्डी का टूटना है। \n\n* **फ्रैक्चर** में छूने पर तेज हड्डी का दर्द, तड़कने की आवाज, टेढ़ापन और चलने में असमर्थता होती है। \n* **मोच** में जोड़ थोड़ा हिल सकता है और दर्द फैलने वाला होता है।",
+    hn: "Moch (Sprain) me ligaments (jo bones ko connect karte hain) stretch ya tear hote hain. Fracture me bone actual toot/crack jati hai. \n\n* **Fractures** me direct bone dabane pe severe pain hota hai, crack sound aati hai, aur aap chal nahi sakte. \n* **Moch** me thoda hil-dul sakte hain aur sujan dheere-dheere aati hai."
+  },
+  {
+    id: "ice_rules",
+    keywords: [
+      "ice", "cold", "compress", "barf", "sek", "sekna", "timer", "minutes", "time", "how long",
+      "बर्फ", "सेक", "ठंडा", "टाइमर", "मिनट", "समय", "कितने समय", "sujan", "swelling", "bruise", "bruising", "neel", "sekne", "seking",
+      "coldness", "timers"
+    ],
+    en: "Apply ice wrapped in a damp towel for **15-20 minutes** every 2-3 hours. Never apply ice directly to bare skin to prevent ice burns. Let the skin return to normal temperature before reapplying.",
+    hi: "बर्फ को सीधे त्वचा पर न लगाएं। इसे गीले तौलिए में लपेटकर **15 से 20 मिनट** के लिए हर 2-3 घंटे में लगाएं। त्वचा को दोबारा बर्फ लगाने से पहले सामान्य तापमान पर आने दें।",
+    hn: "Barf (Ice) ko directly skin pe mat lagayein. Kapde me wrap karke **15-20 minutes** ke liye har 2-3 ghante me cold compress dein, jisse sujan aur pain kam ho sake."
+  },
+  {
+    id: "rice_protocol",
+    keywords: [
+      "rice", "first aid", "treatment", "ilaj", "care", "cure", "recover", "help",
+      "प्राथमिक चिकित्सा", "इलाज", "उपचार", "प्राथमिक उपचार", "injury", "chot", "first-aid", "firstaid", "upchar", "hurt", "zakhmi",
+      "injuries", "hurting", "helps", "recovery"
+    ],
+    en: "Follow the R.I.C.E. protocol for sprains:\n* **Rest:** Avoid putting weight on the joint.\n* **Ice:** Cold compress for 15-20 mins.\n* **Compression:** Snug elastic wrap (bandage).\n* **Elevation:** Lift injury above heart level using pillows.",
+    hi: "चोट के प्राथमिक उपचार के लिए R.I.C.E. अपनाएं:\n* **Rest (विश्राम):** जोड़ पर भार न डालें।\n* **Ice (बर्फ):** 15-20 मिनट बर्फ सेक करें।\n* **Compression (पट्टी):** लोचदार पट्टी लपेटें।\n* **Elevation (ऊंचाई):** जोड़ को तकिये पर रख कर दिल के स्तर से ऊपर उठाएं।",
+    hn: "R.I.C.E. protocol sprains ke liye standard first-aid hai:\n* **Rest:** Chalne aur weight daalne se bachein.\n* **Ice:** 15-20 mins barf lagayein.\n* **Compression:** Elastic bandage snugly wrap karein.\n* **Elevation:** Injury ko takiye pe rakh kar heart level se upar uthayein."
+  },
+  {
+    id: "ottawa_rules",
+    keywords: [
+      "ottawa", "rules", "xray", "x-ray", "exray", "criteria", "kneecap", "malleolus",
+      "ओटावा", "नियम", "एक्सरे", "जांच", "rule"
+    ],
+    en: "The **Ottawa Rules** are validated medical guidelines. If you can walk 4 steps immediately after injury AND now, and feel no bone tenderness at the outer/inner ankle or midfoot bones, an X-ray is statistically NOT required (<1% fracture risk).",
+    hi: "**ओटावा नियम** प्रमाणित चिकित्सा नियम हैं। यदि आप चोट के तुरंत बाद और अभी 4 कदम चल सकते हैं, और टखने या पैर की हड्डियों को दबाने पर कोई दर्द नहीं है, तो एक्स-रे की आवश्यकता नहीं होती (जोखिम <1%)।",
+    hn: "Ottawa Rules medical guidelines hain jo doctors use karte hain. Agar aap chot ke baad 4 steps chal sakte hain aur specific bone points ko touch karne pe pain nahi hai, toh fracture risk <1% hota hai aur X-ray ki jarurat nahi hoti."
+  },
+  {
+    id: "emergency_red_flags",
+    keywords: [
+      "emergency", "danger", "khatra", "red flag", "hospital", "doctor", "er", "numbness", "deformity", "bleeding", "protrude", "cold", "blue",
+      "आपातकाल", "खतरा", "अस्पताल", "डॉक्टर", "सुन्न", "रक्तस्राव", "नीला", "ठंडा", "khoon", "blood", "cut", "wound", "gira", "chot lagna"
+    ],
+    en: "Seek emergency care immediately if you see protruding bone, complete numbness/tingling, skin turning pale/blue/cold below the joint, or have severe, unrelenting pain. Do not try to move.",
+    hi: "यदि हड्डी त्वचा से बाहर आ गई हो, चोट के नीचे का हिस्सा सुन्न हो, उंगलियां पीली/नीली या ठंडी पड़ गई हों, तो तुरंत आपातकालीन कक्ष (ER) जाएं। चोटिल हिस्से को बिल्कुल न हिलाएं।",
+    hn: "Emergency signals ko ignore mat karein! Agar bone skin se bahar aa gayi ho, numbness (sunn) ho raha ho, fingers/toes thande/pale pad rahe hon, toh turant nearest hospital ER me jayein."
+  },
+  {
+    id: "pain_relief_meds",
+    keywords: [
+      "medicine", "painkiller", "paracetamol", "pill", "tablet", "pain relief", "meds", "advil", "crocin", "combiflam", "dawa", "goli",
+      "दवा", "दर्द निवारक", "गोली", "पैरासिटामोल", "कॉम्बिफ्लेम", "pain", "dard", "relief",
+      "medicines", "painkillers", "pills", "tablets", "dawayen", "dawaein", "painful"
+    ],
+    en: "For pain relief, over-the-counter paracetamol (acetaminophen) is generally safe. Avoid NSAIDs like ibuprofen or aspirin in the first 24-48 hours if severe bleeding or fracture is suspected, as they can thin blood. Consult a doctor.",
+    hi: "दर्द से राहत के लिए सामान्य पैरासिटामोल सुरक्षित है। यदि फ्रैक्चर या गंभीर ब्लीडिंग का संदेह हो, तो पहले 24-48 घंटों में इबुप्रोफेन या एस्पिरिन जैसी दवाओं से बचें। डॉक्टर की सलाह अवश्य लें।",
+    hn: "Normal pain ke liye Paracetamol (Crocin/Crocin Pain Relief) safe hai. Agar fracture ya internal bleeding ka doubt ho, toh initial 24 hours me Ibuprofen (Combiflam) ya Aspirin lene se bachein kyunki ye blood thin karti hain. Doctor se poochein."
+  }
+];
+
+// Helper to perform smart keyword matching (whole word boundary for short queries, substring for long queries)
+const matchKeyword = (query, keyword) => {
+  const q = query.toLowerCase();
+  const kw = keyword.toLowerCase();
+  
+  if (kw.length <= 4) {
+    const index = q.indexOf(kw);
+    if (index === -1) return false;
+    
+    const charBefore = index > 0 ? q[index - 1] : ' ';
+    const charAfter = index + kw.length < q.length ? q[index + kw.length] : ' ';
+    
+    const isWordChar = (char) => {
+      const code = char.charCodeAt(0);
+      if ((code >= 97 && code <= 122) || (code >= 48 && code <= 57) || code === 95) return true;
+      if (code >= 0x0900 && code <= 0x097F) return true;
+      return false;
+    };
+    
+    return !isWordChar(charBefore) && !isWordChar(charAfter);
+  }
+  
+  return q.includes(kw);
+};
+
+const MOCK_HISTORY = [
+  {
+    assessmentId: "assess_1a2b3c4d5",
+    userId: "karan_user",
+    injuryArea: "ankle",
+    injuryTimeAgo: "1-6 hours",
+    injuryMechanism: "twist_roll",
+    soundHeard: "no_sound",
+    symptoms: {
+      painLevel: 3,
+      painType: "dull_aching",
+      painIncreases: ["when_moving"],
+      painReliefWithMeds: "yes",
+      swelling: "mild",
+      bruising: "none",
+      deformity: "no",
+      skinColor: "normal",
+      tightTense: false,
+      movementAbility: "partial",
+      sideComparison: "slightly_different"
+    },
+    ottawaResults: {
+      canWalkImmediately: true,
+      canWalkNow: true,
+      lateralMalleolusTenderness: false,
+      medialMalleolusTenderness: false
+    },
+    redFlags: {
+      boneProtruding: false,
+      numbnessBelow: false,
+      blueColdBelow: false,
+      unrelivedPain: false
+    },
+    riskScore: 11,
+    riskLevel: "LOW",
+    scoreBreakdown: [
+      { factor: "Low-energy mechanism (twist/roll)", points: 3 },
+      { factor: "Mild visual swelling", points: 3 },
+      { factor: "Partial movement with pain", points: 5 }
+    ],
+    recommendations: {
+      level: "LOW",
+      title: "🟢 Low Risk — Soft Tissue Injury Likely (Sprain)",
+      actions: [
+        "Apply the R.I.C.E. protocol (Rest, Ice, Compression, Elevation) to reduce pain and swelling.",
+        "Rest the joint and monitor for the next 48-72 hours.",
+        "Seek medical evaluation if your pain increases or you still cannot bear weight after 3 days."
+      ]
+    },
+    imageUrl: null,
+    createdAt: new Date(Date.now() - 24 * 3600 * 1000 * 2).toISOString()
+  },
+  {
+    assessmentId: "assess_2b3c4d5e6",
+    userId: "karan_user",
+    injuryArea: "wrist",
+    injuryTimeAgo: "6-24 hours",
+    injuryMechanism: "foosh",
+    soundHeard: "crack_snap",
+    symptoms: {
+      painLevel: 8,
+      painType: "sharp_stabbing",
+      painIncreases: ["constant_rest", "when_moving"],
+      painReliefWithMeds: "no",
+      swelling: "severe",
+      bruising: "large_area",
+      deformity: "no",
+      skinColor: "normal",
+      tightTense: true,
+      movementAbility: "very_little",
+      sideComparison: "clearly_different"
+    },
+    ottawaResults: {
+      snuffboxTenderness: true,
+      scaphoidTubercleTenderness: true,
+      thumbCompressionPain: true,
+      gripPain: true
+    },
+    redFlags: {
+      boneProtruding: false,
+      numbnessBelow: false,
+      blueColdBelow: false,
+      unrelivedPain: false
+    },
+    riskScore: 78,
+    riskLevel: "HIGH",
+    scoreBreakdown: [
+      { factor: "High-energy mechanism (FOOSH)", points: 15 },
+      { factor: "Cracking/snapping sound heard", points: 20 },
+      { factor: "Severe pain (8/10)", points: 15 },
+      { factor: "Sharp pain type", points: 10 },
+      { factor: "Constant pain at rest", points: 12 },
+      { factor: "Severe swelling", points: 15 },
+      { factor: "Large area of bruising", points: 10 }
+    ],
+    recommendations: {
+      level: "HIGH",
+      title: "🔴 High Risk — High Fracture Probability",
+      actions: [
+        "Do NOT bear any weight on the injured limb.",
+        "Immobilize the joint using a splint or padding.",
+        "Visit an urgent care center or doctor today.",
+        "An X-ray evaluation is strongly recommended based on clinical decision rules."
+      ]
+    },
+    imageUrl: null,
+    createdAt: new Date(Date.now() - 24 * 3600 * 1000 * 5).toISOString()
+  }
+];
+
+export default function App() {
+  // --- AUTHENTICATION STATES & METHODS ---
+  const [currentUser, setCurrentUser] = useState(() => {
+    const saved = localStorage.getItem('injuryiq_current_user');
+    return saved ? JSON.parse(saved) : null;
+  });
+  const [authEmail, setAuthEmail] = useState('');
+  const [authPassword, setAuthPassword] = useState('');
+  const [authName, setAuthName] = useState('');
+  const [authMode, setAuthMode] = useState('login'); // 'login', 'signup'
+  const [authError, setAuthError] = useState('');
+  const [isAuthLoading, setIsAuthLoading] = useState(false);
+
+  const handleAuthSubmit = () => {
+    const emailVal = authEmail.trim();
+    const passwordVal = authPassword;
+    const nameVal = authName.trim();
+    const currentMode = authMode;
+
+    if (!emailVal || !passwordVal) {
+      setAuthError(lang === 'hi' ? 'ईमेल और पासवर्ड आवश्यक हैं।' : 'Email and Password are required.');
+      return;
+    }
+    if (currentMode === 'signup' && !nameVal) {
+      setAuthError(lang === 'hi' ? 'पूरा नाम दर्ज करना आवश्यक है।' : 'Full Name is required.');
+      return;
+    }
+    if (passwordVal.length < 6) {
+      setAuthError(lang === 'hi' ? 'पासवर्ड कम से कम 6 अक्षरों का होना चाहिए।' : 'Password must be at least 6 characters.');
+      return;
+    }
+
+    setIsAuthLoading(true);
+    setAuthError('');
+
+    setTimeout(() => {
+      const usersKey = 'injuryiq_users';
+      const localUsers = JSON.parse(localStorage.getItem(usersKey) || '[]');
+
+      if (currentMode === 'signup') {
+        const exists = localUsers.some(u => u.email.toLowerCase() === emailVal.toLowerCase());
+        if (exists) {
+          setAuthError(lang === 'hi' ? 'इस ईमेल के साथ पहले से ही एक खाता है।' : 'An account with this email already exists.');
+          setIsAuthLoading(false);
+          return;
+        }
+
+        const newUser = {
+          email: emailVal.toLowerCase(),
+          password: passwordVal,
+          name: nameVal
+        };
+
+        localUsers.push(newUser);
+        localStorage.setItem(usersKey, JSON.stringify(localUsers));
+        
+        // Show success alert and switch back to login mode
+        setAuthMode('login');
+        setAuthPassword('');
+        setAuthError('');
+        alert("Registration successful! Please login with your email and password.");
+      } else {
+        const matchedUser = localUsers.find(u => u.email.toLowerCase() === emailVal.toLowerCase() && u.password === passwordVal);
+        if (!matchedUser) {
+          setAuthError(lang === 'hi' ? 'अमान्य ईमेल या पासवर्ड।' : 'Invalid email or password.');
+          setIsAuthLoading(false);
+          return;
+        }
+
+        const sessionUser = { email: matchedUser.email, name: matchedUser.name };
+        localStorage.setItem('injuryiq_current_user', JSON.stringify(sessionUser));
+        setCurrentUser(sessionUser);
+        
+        // Reset auth form fields on successful login
+        setAuthEmail('');
+        setAuthPassword('');
+        setAuthName('');
+      }
+      setIsAuthLoading(false);
+    }, 800);
+  };
+
+  const handleGoogleSignIn = () => {
+    setIsAuthLoading(true);
+    setAuthError('');
+
+    setTimeout(() => {
+      const sessionUser = { email: 'karan@google.com', name: 'Karan (Google User)' };
+      localStorage.setItem('injuryiq_current_user', JSON.stringify(sessionUser));
+      setCurrentUser(sessionUser);
+      setIsAuthLoading(false);
+    }, 600);
+  };
+
+  const handleLogout = () => {
+    localStorage.removeItem('injuryiq_current_user');
+    setCurrentUser(null);
+    setView('dashboard');
+  };
+
+  // --- APPLICATION STATES ---
+  const [lang, setLang] = useState('en'); // 'en', 'hi', 'hn' (Hinglish)
+  const [darkMode, setDarkMode] = useState(true);
+  const [view, setView] = useState('dashboard'); // 'dashboard', 'questionnaire', 'history', 'details'
+  const [history, setHistory] = useState([]);
+  const [selectedHistoryItem, setSelectedHistoryItem] = useState(null);
+  const [disclaimerAccepted, setDisclaimerAccepted] = useState(false);
+  const [isSosOpen, setIsSosOpen] = useState(false);
+  const [sosStatus, setSosStatus] = useState('idle'); // 'idle', 'locating', 'sending', 'sent'
+
+  // --- CHATBOT WIDGET STATES ---
+  const [chatOpen, setChatOpen] = useState(false);
+  const [chatInput, setChatInput] = useState('');
+  const [chatMessages, setChatMessages] = useState([]);
+  const [chatTyping, setChatTyping] = useState(false);
+  const [isListening, setIsListening] = useState(false);
+  const [voiceMuted, setVoiceMuted] = useState(false); // Enable voice replies by default
+  const [geminiKey, setGeminiKey] = useState(() => {
+    const key = localStorage.getItem('injuryiq_gemini_key');
+    if (key && key !== 'null' && key !== 'undefined' && key.trim() !== '') {
+      return key;
+    }
+    return 'AIzaSyDJfX-eXDkoCs5y9GRbI5O88kZZtjgM58Q';
+  });
+  const [showSettings, setShowSettings] = useState(false);
+  const chatEndRef = useRef(null);
+
+  // --- QUESTIONNAIRE FLOW STATES ---
+  const [injuryArea, setInjuryArea] = useState('');
+  const [currentStep, setCurrentStep] = useState(0);
+  const [answers, setAnswers] = useState({
+    age: 22,
+    injuryTimeAgo: '1-6 hours',
+    howInjured: 'twist_roll',
+    soundHeard: 'no_sound',
+    painLevel: 5,
+    painType: 'sharp_stabbing',
+    painIncreases: [],
+    painReliefWithMeds: 'no',
+    swelling: 'none',
+    bruising: 'none',
+    deformity: 'no',
+    skinColor: 'normal',
+    tightTense: false,
+    canWalkImmediately: true,
+    canWalkNow: true,
+    lateralMalleolusTenderness: false,
+    medialMalleolusTenderness: false,
+    fifthMetatarsalTenderness: false,
+    navicularTenderness: false,
+    patellarTenderness: false,
+    fibularHeadTenderness: false,
+    kneeFlexion90: true,
+    snuffboxTenderness: false,
+    scaphoidTubercleTenderness: false,
+    thumbCompressionPain: false,
+    gripPain: false,
+    movementAbility: 'partial',
+    sideComparison: 'slightly_different',
+    boneProtruding: false,
+    numbnessBelow: false,
+    blueColdBelow: false,
+    unrelivedPain: false
+  });
+
+  // --- IMAGE UPLOAD & AI PROCESSING STATES ---
+  const [injuryPhoto, setInjuryPhoto] = useState(null);
+  const [injuryPhotoUrl, setInjuryPhotoUrl] = useState(null);
+  const [comparisonPhoto, setComparisonPhoto] = useState(null);
+  const [comparisonPhotoUrl, setComparisonPhotoUrl] = useState(null);
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [analysisLog, setAnalysisLog] = useState([]);
+  const [aiResult, setAiResult] = useState(null);
+
+  // --- ICE TIMER STATE ---
+  const [iceTime, setIceTime] = useState(1200); 
+  const [iceTimerRunning, setIceTimerRunning] = useState(false);
+  const timerRef = useRef(null);
+
+  // --- RECOVERY TRACKING STATES ---
+  const [activeTrackingId, setActiveTrackingId] = useState(() => {
+    const savedUser = localStorage.getItem('injuryiq_current_user');
+    if (savedUser) {
+      const email = JSON.parse(savedUser).email;
+      return localStorage.getItem(`injuryiq_active_tracking_${email}`) || '';
+    }
+    return '';
+  });
+  const [recoveryLogs, setRecoveryLogs] = useState([]);
+  const [showLogModal, setShowLogModal] = useState(false);
+  const [logForm, setLogForm] = useState({
+    painLevel: 5,
+    swelling: 'none',
+    mobility: 'normal',
+    notes: '',
+    date: new Date().toISOString().split('T')[0]
+  });
+  const [hoveredLog, setHoveredLog] = useState(null);
+
+  // --- PHYSIOTHERAPY REHAB STATES ---
+  const [recoverySubTab, setRecoverySubTab] = useState('stats'); // 'stats' or 'rehab'
+  const [activeExercise, setActiveExercise] = useState(null);
+  const [rehabTimer, setRehabTimer] = useState(0);
+  const [rehabTimerRunning, setRehabTimerRunning] = useState(false);
+  const rehabTimerRef = useRef(null);
+
+  const t = TRANSLATIONS[lang];
+
+  // --- SYMPTOM QUESTION CONSTELLATIONS ---
+  const steps = [
+    { title: t.injuryLocation, category: "Area Selection" },
+    { title: t.metadataTitle, category: "Basic Info" },
+    { title: t.mechanismLabel, category: "Injury Mechanism" },
+    { title: "Pain Indicators", category: "Pain Assessment" },
+    { title: "Physical Visuals", category: "Physical Signs" },
+    { title: "Tenderness Map", category: "Ottawa Rules Check" },
+    { title: "Mobility & Function", category: "Functional Check" },
+    { title: t.redFlagsTitle, category: "Red Flag Screening" },
+    { title: t.aiUploadTitle, category: "AI Image Upload" }
+  ];
+
+  // --- DATABASE LOCAL STORAGE LOADING & API KEY INIT ---
+  useEffect(() => {
+    if (currentUser) {
+      const historyKey = `injuryiq_history_${currentUser.email}`;
+      const localData = localStorage.getItem(historyKey);
+      if (localData) {
+        setHistory(JSON.parse(localData));
+      } else {
+        localStorage.setItem(historyKey, JSON.stringify(MOCK_HISTORY));
+        setHistory(MOCK_HISTORY);
+      }
+    } else {
+      setHistory([]);
+    }
+
+    // Auto populate the Gemini API key in LocalStorage if not already set or invalid
+    const savedKey = localStorage.getItem('injuryiq_gemini_key');
+    if (!savedKey || savedKey === 'null' || savedKey === 'undefined' || !savedKey.trim()) {
+      localStorage.setItem('injuryiq_gemini_key', 'AIzaSyDJfX-eXDkoCs5y9GRbI5O88kZZtjgM58Q');
+    }
+  }, [currentUser]);
+
+  // Theme Toggler Effect
+  useEffect(() => {
+    const bodyClass = document.body.classList;
+    if (darkMode) {
+      bodyClass.remove('light-mode');
+    } else {
+      bodyClass.add('light-mode');
+    }
+  }, [darkMode]);
+
+  // Ice Timer Hook
+  useEffect(() => {
+    if (iceTimerRunning) {
+      timerRef.current = setInterval(() => {
+        setIceTime((prev) => {
+          if (prev <= 1) {
+            clearInterval(timerRef.current);
+            setIceTimerRunning(false);
+            try {
+              const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+              const osc = audioCtx.createOscillator();
+              const gain = audioCtx.createGain();
+              osc.connect(gain);
+              gain.connect(audioCtx.destination);
+              osc.frequency.setValueAtTime(440, audioCtx.currentTime);
+              osc.start();
+              osc.stop(audioCtx.currentTime + 0.8);
+            } catch (e) {
+              console.log("Audio block");
+            }
+            alert("⏰ Ice compress time completed! Please remove the ice pack.");
+            return 1200;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+    } else {
+      clearInterval(timerRef.current);
+    }
+    return () => clearInterval(timerRef.current);
+  }, [iceTimerRunning]);
+
+  // Chatbot Auto-scroll
+  useEffect(() => {
+    if (chatEndRef.current) {
+      chatEndRef.current.scrollIntoView({ behavior: 'smooth' });
+    }
+  }, [chatMessages, chatTyping]);
+
+  // Initialize Chatbot Messages
+  useEffect(() => {
+    setChatMessages([
+      { sender: 'bot', text: t.chatbotWelcome }
+    ]);
+  }, [lang]);
+
+  // --- PHYSIOTHERAPY TIMER HOOK ---
+  useEffect(() => {
+    if (rehabTimerRunning) {
+      rehabTimerRef.current = setInterval(() => {
+        setRehabTimer((prev) => {
+          if (prev <= 1) {
+            clearInterval(rehabTimerRef.current);
+            setRehabTimerRunning(false);
+            try {
+              const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+              const osc = audioCtx.createOscillator();
+              const gain = audioCtx.createGain();
+              osc.connect(gain);
+              gain.connect(audioCtx.destination);
+              osc.frequency.setValueAtTime(523.25, audioCtx.currentTime); // C5
+              osc.start();
+              osc.stop(audioCtx.currentTime + 0.5);
+            } catch (e) {
+              console.log("Audio context blocked");
+            }
+            if (activeExercise && currentUser && activeTrackingId) {
+              const logsKey = `injuryiq_recovery_logs_${currentUser.email}_${activeTrackingId}`;
+              const todayStr = new Date().toISOString().split('T')[0];
+              const logIndex = recoveryLogs.findIndex(log => log.date === todayStr);
+              let updatedLogs = [...recoveryLogs];
+              const latestLog = recoveryLogs.length > 0 ? recoveryLogs[recoveryLogs.length - 1] : null;
+              
+              if (logIndex > -1) {
+                const todayLog = updatedLogs[logIndex];
+                const completed = todayLog.completedExercises || [];
+                if (!completed.includes(activeExercise.id)) {
+                  todayLog.completedExercises = [...completed, activeExercise.id];
+                  updatedLogs[logIndex] = todayLog;
+                  localStorage.setItem(logsKey, JSON.stringify(updatedLogs));
+                  setRecoveryLogs(updatedLogs);
+                }
+              } else {
+                const newTodayLog = {
+                  id: `log_${Math.random().toString(36).substr(2, 9)}`,
+                  painLevel: latestLog ? latestLog.painLevel : 5,
+                  swelling: latestLog ? latestLog.swelling : 'none',
+                  mobility: latestLog ? latestLog.mobility : 'normal',
+                  notes: 'Completed exercise: ' + activeExercise.name,
+                  date: todayStr,
+                  completedExercises: [activeExercise.id]
+                };
+                updatedLogs.push(newTodayLog);
+                updatedLogs.sort((a, b) => new Date(a.date) - new Date(b.date));
+                localStorage.setItem(logsKey, JSON.stringify(updatedLogs));
+                setRecoveryLogs(updatedLogs);
+              }
+            }
+            alert(`🎉 Exercise completed: ${activeExercise ? activeExercise.name : 'Rehab exercise'}! Nice job.`);
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+    } else {
+      clearInterval(rehabTimerRef.current);
+    }
+    return () => clearInterval(rehabTimerRef.current);
+  }, [rehabTimerRunning, activeExercise, recoveryLogs, currentUser, activeTrackingId]);
+
+  const startRehabTimer = (exercise) => {
+    setActiveExercise(exercise);
+    setRehabTimer(exercise.duration);
+    setRehabTimerRunning(true);
+  };
+
+  const toggleRehabTimer = () => {
+    setRehabTimerRunning(!rehabTimerRunning);
+  };
+
+  const resetRehabTimer = () => {
+    setRehabTimerRunning(false);
+    if (activeExercise) {
+      setRehabTimer(activeExercise.duration);
+    } else {
+      setRehabTimer(0);
+    }
+  };
+
+  // --- RECOVERY LOGS SYNC ---
+  useEffect(() => {
+    if (currentUser && activeTrackingId) {
+      const logsKey = `injuryiq_recovery_logs_${currentUser.email}_${activeTrackingId}`;
+      const savedLogs = localStorage.getItem(logsKey);
+      if (savedLogs) {
+        setRecoveryLogs(JSON.parse(savedLogs));
+      } else {
+        const assessment = history.find(item => item.assessmentId === activeTrackingId);
+        if (assessment) {
+          const initialLog = {
+            id: `log_init_${activeTrackingId}`,
+            painLevel: assessment.symptoms?.painLevel ?? 5,
+            swelling: assessment.symptoms?.swelling ?? 'none',
+            mobility: assessment.symptoms?.movementAbility === 'normal' ? 'normal' : (assessment.symptoms?.movementAbility === 'partial' ? 'partial' : 'limited'),
+            notes: 'Initial Assessment Day',
+            date: assessment.createdAt.split('T')[0]
+          };
+          localStorage.setItem(logsKey, JSON.stringify([initialLog]));
+          setRecoveryLogs([initialLog]);
+        } else {
+          setRecoveryLogs([]);
+        }
+      }
+    } else {
+      setRecoveryLogs([]);
+    }
+  }, [activeTrackingId, currentUser, history]);
+
+  const handleLogSubmit = (e) => {
+    e.preventDefault();
+    if (!currentUser || !activeTrackingId) return;
+
+    const logsKey = `injuryiq_recovery_logs_${currentUser.email}_${activeTrackingId}`;
+    const dateVal = logForm.date;
+
+    const existingIndex = recoveryLogs.findIndex(log => log.date === dateVal);
+    let updatedLogs = [...recoveryLogs];
+
+    const newLog = {
+      id: existingIndex > -1 ? recoveryLogs[existingIndex].id : `log_${Math.random().toString(36).substr(2, 9)}`,
+      painLevel: logForm.painLevel,
+      swelling: logForm.swelling,
+      mobility: logForm.mobility,
+      notes: logForm.notes,
+      date: dateVal
+    };
+
+    if (existingIndex > -1) {
+      updatedLogs[existingIndex] = newLog;
+    } else {
+      updatedLogs.push(newLog);
+    }
+
+    updatedLogs.sort((a, b) => new Date(a.date) - new Date(b.date));
+
+    localStorage.setItem(logsKey, JSON.stringify(updatedLogs));
+    setRecoveryLogs(updatedLogs);
+    setShowLogModal(false);
+    
+    setLogForm({
+      painLevel: 5,
+      swelling: 'none',
+      mobility: 'normal',
+      notes: '',
+      date: new Date().toISOString().split('T')[0]
+    });
+  };
+
+  const handleLogDelete = (id) => {
+    if (!currentUser || !activeTrackingId) return;
+    if (id.startsWith('log_init_')) {
+      alert(lang === 'hn' ? "Day 1 (initial assessment) ki entry delete nahi kar sakte!" : "Cannot delete Day 1 initial assessment entry!");
+      return;
+    }
+    const logsKey = `injuryiq_recovery_logs_${currentUser.email}_${activeTrackingId}`;
+    const updatedLogs = recoveryLogs.filter(log => log.id !== id);
+    localStorage.setItem(logsKey, JSON.stringify(updatedLogs));
+    setRecoveryLogs(updatedLogs);
+  };
+
+  const handleStopTracking = () => {
+    const confirmStop = window.confirm(
+      lang === 'hi' ? "क्या आप इस चोट की ट्रैकिंग बंद करना चाहते हैं?" :
+      (lang === 'hn' ? "Kya aap iss injury ki tracking stop karna chahte hain?" :
+      "Are you sure you want to stop tracking this injury?")
+    );
+    if (confirmStop && currentUser) {
+      localStorage.removeItem(`injuryiq_active_tracking_${currentUser.email}`);
+      setActiveTrackingId('');
+      setView('dashboard');
+    }
+  };
+
+  const toggleIceTimer = () => {
+    setIceTimerRunning(!iceTimerRunning);
+  };
+
+  const resetIceTimer = () => {
+    setIceTimerRunning(false);
+    setIceTime(1200);
+  };
+
+  const formatIceTime = (secs) => {
+    const mins = Math.floor(secs / 60);
+    const s = secs % 60;
+    return `${mins.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+  };
+
+  // --- TEXT TO SPEECH (VOICE OUTPUT) ---
+  const speakText = (text) => {
+    if (voiceMuted) return;
+    
+    // Check support
+    if (!('speechSynthesis' in window)) {
+      console.warn("Speech Synthesis not supported");
+      return;
+    }
+
+    window.speechSynthesis.cancel(); // Stop current speech
+    
+    const cleanText = text.replace(/[*#]/g, ""); // Clean markdown symbols
+    const utterance = new SpeechSynthesisUtterance(cleanText);
+    const voices = window.speechSynthesis.getVoices();
+    let selectedVoice = null;
+    
+    if (lang === 'hi') {
+      selectedVoice = voices.find(v => v.lang.startsWith('hi')) || voices.find(v => v.lang.startsWith('en'));
+    } else if (lang === 'hn') {
+      // For Hinglish, use a Hindi voice or Indian accented English voice
+      selectedVoice = voices.find(v => v.lang.startsWith('hi')) || voices.find(v => v.lang.includes('IN'));
+    } else {
+      selectedVoice = voices.find(v => v.lang.startsWith('en'));
+    }
+
+    if (selectedVoice) {
+      utterance.voice = selectedVoice;
+    }
+    utterance.lang = lang === 'hi' ? 'hi-IN' : 'en-US';
+    window.speechSynthesis.speak(utterance);
+  };
+
+  // --- SPEECH TO TEXT (VOICE INPUT) ---
+  const startVoiceRecognition = () => {
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SpeechRecognition) {
+      alert("Voice recognition is not supported in this browser. Please try Google Chrome.");
+      return;
+    }
+
+    const recognition = new SpeechRecognition();
+    recognition.continuous = false;
+    recognition.interimResults = false;
+    
+    // Match locales for speech input
+    recognition.lang = lang === 'hi' ? 'hi-IN' : (lang === 'hn' ? 'hi-IN' : 'en-US');
+
+    recognition.onstart = () => {
+      setIsListening(true);
+      window.speechSynthesis.cancel(); // Stop talking when user starts speaking
+    };
+
+    recognition.onerror = (e) => {
+      console.error(e);
+      setIsListening(false);
+    };
+
+    recognition.onend = () => {
+      setIsListening(false);
+    };
+
+    recognition.onresult = (event) => {
+      const transcript = event.results[0][0].transcript;
+      setChatInput(transcript);
+      // Automatically send text after converting speech
+      setTimeout(() => {
+        handleSendChat(transcript);
+      }, 500);
+    };
+
+    recognition.start();
+  };
+
+  // --- CHATBOT MESSAGE SUBMIT ---
+  const handleSendChat = async (textToSend = null) => {
+    const query = textToSend || chatInput;
+    if (!query.trim()) return;
+
+    const updatedMessages = [...chatMessages, { sender: 'user', text: query }];
+    setChatMessages(updatedMessages);
+    if (!textToSend) setChatInput('');
+    
+    setChatTyping(true);
+
+    if (geminiKey.trim()) {
+      // Live Gemini API call
+      try {
+        const systemPrompt = `You are InjuryIQ AI, an AI-assisted clinical triage assistant for joint injuries (ankle, foot, knee, wrist, elbow).
+Your goal is to guide the user using evidence-based rules (like Ottawa Ankle/Foot/Knee Rules).
+Respond in the language of the user's query (English, Hindi, or Hinglish).
+CRITICAL:
+1. You must NEVER diagnose. Strictly provide triage support and decision advice.
+2. Recommend the R.I.C.E. protocol for sprains.
+3. Advise visiting the ER or calling emergency services immediately if red flags are present (bone protruding, blue/cold extremities, numbness, pale skin).
+4. Prompt the user to use the 'Injury Assessment Checklist' on the dashboard for a full score-based triage report.
+5. Keep your responses short and under 3-4 sentences. Use clear bullet points if needed.`;
+
+        // Format chat history for Gemini API, ensuring alternating user and model roles
+        const contents = [];
+        const recentHistory = updatedMessages.slice(-6);
+        recentHistory.forEach(msg => {
+          const role = msg.sender === 'user' ? 'user' : 'model';
+          
+          if (contents.length === 0) {
+            contents.push({
+              role: role,
+              parts: [{ text: msg.text }]
+            });
+          } else {
+            const lastIdx = contents.length - 1;
+            if (contents[lastIdx].role === role) {
+              // If consecutive messages are of the same role, combine their text
+              contents[lastIdx].parts[0].text += "\n" + msg.text;
+            } else {
+              contents.push({
+                role: role,
+                parts: [{ text: msg.text }]
+              });
+            }
+          }
+        });
+
+        const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${geminiKey}`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            contents: contents,
+            systemInstruction: {
+              parts: [{ text: systemPrompt }]
+            },
+            generationConfig: {
+              maxOutputTokens: 2048,
+              temperature: 0.7
+            }
+          })
+        });
+
+        if (!response.ok) {
+          const errData = await response.json();
+          throw new Error(errData.error?.message || 'Gemini API Error');
+        }
+
+        const data = await response.json();
+        const botReply = data.candidates[0].content.parts[0].text;
+
+        setChatMessages(prev => [...prev, { sender: 'bot', text: botReply }]);
+        setChatTyping(false);
+        speakText(botReply);
+      } catch (error) {
+        console.error("Gemini API Error:", error);
+        const botReply = `⚠️ AI Chat Error: ${error.message}. Switched back to static rules. Please check your settings or key.`;
+        setChatMessages(prev => [...prev, { sender: 'bot', text: botReply }]);
+        setChatTyping(false);
+        speakText(botReply);
+      }
+    } else {
+      // Fallback: search static topics
+      setTimeout(() => {
+        const sanitizedQuery = query.toLowerCase();
+        let matchedTopic = null;
+
+        for (const topic of CHATBOT_TOPICS) {
+          const matches = topic.keywords.some(keyword => matchKeyword(sanitizedQuery, keyword));
+          if (matches) {
+            matchedTopic = topic;
+            break;
+          }
+        }
+
+        let botReply = "";
+        if (matchedTopic) {
+          botReply = matchedTopic[lang] || matchedTopic["en"];
+        } else {
+          if (lang === 'hi') {
+            botReply = "मैं समझता हूँ। कृपया चोट से सम्बंधित कुछ स्पष्ट शब्द लिखकर या माइक दबाकर पूछें, जैसे: 'मोच या फ्रैक्चर', 'बर्फ लगाने का नियम', 'RICE इलाज', 'दर्द निवारक दवा' या 'खतरे के संकेत'। आप ऊपर सेटिंग्स आइकन दबाकर Gemini AI API Key भी सेट कर सकते हैं जिससे मैं हर सवाल का लाइव जवाब दे सकूँ।";
+          } else if (lang === 'hn') {
+            botReply = "Main samajhta hoon. Injury care ke baare me sawaal poochne ke liye please key phrases bolein/type karein, jaise: 'sprain vs fracture', 'barf lagane ka time', 'R.I.C.E. ilaj', 'pain killer tablet' ya 'danger khatra'. Aap settings icon par click karke Gemini AI API Key bhi add kar sakte hain live answers ke liye.";
+          } else {
+            botReply = "I understand your concern. Please try typing or speaking key terms like 'sprain vs fracture', 'how to apply ice', 'R.I.C.E. first aid guide', 'pain relief medicines', or 'emergency red flags'. You can also click the settings icon in the header to enter a Google Gemini API Key for live AI answers.";
+          }
+        }
+
+        setChatMessages(prev => [...prev, { sender: 'bot', text: botReply }]);
+        setChatTyping(false);
+        speakText(botReply);
+      }, 800);
+    }
+  };
+
+  // --- QUESTION HANDLERS ---
+  const handleAnswerChange = (key, value) => {
+    setAnswers(prev => ({ ...prev, [key]: value }));
+  };
+
+  const handlePainIncreases = (item) => {
+    setAnswers(prev => {
+      const current = prev.painIncreases;
+      const index = current.indexOf(item);
+      if (index > -1) {
+        return { ...prev, painIncreases: current.filter(i => i !== item) };
+      } else {
+        return { ...prev, painIncreases: [...current, item] };
+      }
+    });
+  };
+
+  const resetAssessment = () => {
+    setAnswers({
+      age: 22,
+      injuryTimeAgo: '1-6 hours',
+      howInjured: 'twist_roll',
+      soundHeard: 'no_sound',
+      painLevel: 5,
+      painType: 'sharp_stabbing',
+      painIncreases: [],
+      painReliefWithMeds: 'no',
+      swelling: 'none',
+      bruising: 'none',
+      deformity: 'no',
+      skinColor: 'normal',
+      tightTense: false,
+      canWalkImmediately: true,
+      canWalkNow: true,
+      lateralMalleolusTenderness: false,
+      medialMalleolusTenderness: false,
+      fifthMetatarsalTenderness: false,
+      navicularTenderness: false,
+      patellarTenderness: false,
+      fibularHeadTenderness: false,
+      kneeFlexion90: true,
+      snuffboxTenderness: false,
+      scaphoidTubercleTenderness: false,
+      thumbCompressionPain: false,
+      gripPain: false,
+      movementAbility: 'partial',
+      sideComparison: 'slightly_different',
+      boneProtruding: false,
+      numbnessBelow: false,
+      blueColdBelow: false,
+      unrelivedPain: false
+    });
+    setInjuryArea('');
+    setCurrentStep(0);
+    setInjuryPhoto(null);
+    setInjuryPhotoUrl(null);
+    setComparisonPhoto(null);
+    setComparisonPhotoUrl(null);
+    setAiResult(null);
+  };
+
+  const handleStartNewAssessment = () => {
+    resetAssessment();
+    if (!disclaimerAccepted) {
+      setView('disclaimer');
+    } else {
+      setView('questionnaire');
+    }
+  };
+
+  const acceptDisclaimer = () => {
+    setDisclaimerAccepted(true);
+    setView('questionnaire');
+  };
+
+  const handlePhotoUpload = (e, type) => {
+    const file = e.target.files[0];
+    if (file) {
+      const url = URL.createObjectURL(file);
+      if (type === 'injury') {
+        setInjuryPhoto(file);
+        setInjuryPhotoUrl(url);
+      } else {
+        setComparisonPhoto(file);
+        setComparisonPhotoUrl(url);
+      }
+    }
+  };
+
+  // --- SCORING CALCULATION ENGINE ---
+  const calculateResult = () => {
+    const emergencyTriggers = [
+      answers.boneProtruding,
+      answers.numbnessBelow,
+      answers.blueColdBelow,
+      answers.unrelivedPain,
+      answers.deformity === 'yes',
+      answers.skinColor === 'blue_purple' || answers.skinColor === 'pale_white'
+    ];
+
+    const hasEmergencyTrigger = emergencyTriggers.some(t => t === true);
+
+    if (hasEmergencyTrigger) {
+      return {
+        assessmentId: "assess_" + Math.random().toString(36).substr(2, 9),
+        injuryArea,
+        injuryTimeAgo: answers.injuryTimeAgo,
+        injuryMechanism: answers.howInjured,
+        soundHeard: answers.soundHeard,
+        symptoms: { ...answers },
+        ottawaResults: getOttawaAnswers(),
+        redFlags: {
+          boneProtruding: answers.boneProtruding,
+          numbnessBelow: answers.numbnessBelow,
+          blueColdBelow: answers.blueColdBelow,
+          unrelivedPain: answers.unrelivedPain
+        },
+        riskScore: 150,
+        riskLevel: "EMERGENCY",
+        scoreBreakdown: [
+          { factor: "🚨 Emergency Overrides Triggered (Critical Symptoms)", points: 150 }
+        ],
+        recommendations: {
+          level: "EMERGENCY",
+          title: lang === 'hi' ? "⚠️ आपातकालीन स्थिति — तुरंत अस्पताल जाएं" : (lang === 'hn' ? "⚠️ EMERGENCY — Turant ER/Doctor ke paas jayein" : "⚠️ EMERGENCY — Seek Immediate Medical Attention"),
+          actions: lang === 'hi' ? [
+            "तुरंत एम्बुलेंस (108 / 112) बुलाएं या नजदीकी आपातकालीन कक्ष में जाएं।",
+            "चोटिल अंग को बिल्कुल न हिलाएं और सीधा करने की कोशिश न करें।",
+            "खुले घावों को साफ कपड़े से हल्के से ढकें।"
+          ] : [
+            "Call emergency services (112 / 108 / 911) or go to the nearest ER immediately.",
+            "Do NOT attempt to move or straighten the injured limb.",
+            "Keep the patient warm and still. Cover any open wounds with a clean cloth."
+          ]
+        },
+        imageUrl: injuryPhotoUrl,
+        createdAt: new Date().toISOString()
+      };
+    }
+
+    let score = 0;
+    const breakdown = [];
+
+    // Weight-Bearing (Ottawa)
+    if (['ankle', 'foot', 'knee'].includes(injuryArea)) {
+      if (!answers.canWalkImmediately && !answers.canWalkNow) {
+        score += 30;
+        breakdown.push({ factor: "Inability to walk 4 steps (Ottawa Rule positive)", points: 30 });
+      }
+    }
+
+    // Bone Tenderness Points (Ottawa specific)
+    if (injuryArea === 'ankle') {
+      if (answers.lateralMalleolusTenderness) {
+        score += 25;
+        breakdown.push({ factor: "Outer Ankle Bone (Lateral Malleolus) tenderness", points: 25 });
+      }
+      if (answers.medialMalleolusTenderness) {
+        score += 25;
+        breakdown.push({ factor: "Inner Ankle Bone (Medial Malleolus) tenderness", points: 25 });
+      }
+    } else if (injuryArea === 'foot') {
+      if (answers.fifthMetatarsalTenderness) {
+        score += 25;
+        breakdown.push({ factor: "Outer Foot Base (5th Metatarsal) tenderness", points: 25 });
+      }
+      if (answers.navicularTenderness) {
+        score += 25;
+        breakdown.push({ factor: "Inner Midfoot (Navicular Bone) tenderness", points: 25 });
+      }
+    } else if (injuryArea === 'knee') {
+      if (answers.age >= 55) {
+        score += 15;
+        breakdown.push({ factor: "Age ≥ 55 (Ottawa Knee Rule criteria)", points: 15 });
+      }
+      if (answers.patellarTenderness) {
+        score += 25;
+        breakdown.push({ factor: "Isolated Kneecap (Patella) tenderness", points: 25 });
+      }
+      if (answers.fibularHeadTenderness) {
+        score += 25;
+        breakdown.push({ factor: "Outer Knee Bone (Fibular Head) tenderness", points: 25 });
+      }
+      if (!answers.kneeFlexion90) {
+        score += 20;
+        breakdown.push({ factor: "Inability to flex knee to 90 degrees", points: 20 });
+      }
+    } else if (injuryArea === 'wrist') {
+      if (answers.snuffboxTenderness) {
+        score += 25;
+        breakdown.push({ factor: "Anatomical Snuffbox tenderness (Scaphoid assessment)", points: 25 });
+      }
+      if (answers.scaphoidTubercleTenderness) {
+        score += 25;
+        breakdown.push({ factor: "Scaphoid Tubercle tenderness", points: 25 });
+      }
+      if (answers.thumbCompressionPain) {
+        score += 15;
+        breakdown.push({ factor: "Pain with thumb compression", points: 15 });
+      }
+      if (answers.gripPain) {
+        score += 15;
+        breakdown.push({ factor: "Severe pain when gripping objects", points: 15 });
+      }
+    }
+
+    // High Energy Mechanism
+    if (['fall_height', 'sports_collision', 'vehicle_accident', 'foosh'].includes(answers.howInjured)) {
+      score += 15;
+      breakdown.push({ factor: "High-energy mechanism of injury", points: 15 });
+    }
+
+    // Sound Heard
+    if (answers.soundHeard === 'crack_snap') {
+      score += 20;
+      breakdown.push({ factor: "Cracking/snapping sound heard at injury", points: 20 });
+    } else if (answers.soundHeard === 'pop_snap') {
+      score += 10;
+      breakdown.push({ factor: "Popping sound heard at injury", points: 10 });
+    }
+
+    // Pain Parameters
+    if (answers.painLevel >= 8) {
+      score += 15;
+      breakdown.push({ factor: "Severe pain level rated " + answers.painLevel + "/10", points: 15 });
+    } else if (answers.painLevel >= 5) {
+      score += 8;
+      breakdown.push({ factor: "Moderate pain level rated " + answers.painLevel + "/10", points: 8 });
+    }
+
+    if (answers.painType === 'sharp_stabbing') {
+      score += 10;
+      breakdown.push({ factor: "Sharp/stabbing pain character", points: 10 });
+    }
+
+    if (answers.painIncreases.includes('constant_rest')) {
+      score += 12;
+      breakdown.push({ factor: "Constant pain present at rest", points: 12 });
+    }
+
+    // Physical Signs
+    if (answers.swelling === 'severe') {
+      score += 15;
+      breakdown.push({ factor: "Severe visual swelling (stretched skin)", points: 15 });
+    } else if (answers.swelling === 'moderate') {
+      score += 8;
+      breakdown.push({ factor: "Moderate visual swelling", points: 8 });
+    }
+
+    if (answers.bruising === 'large_area') {
+      score += 10;
+      breakdown.push({ factor: "Large area of bruising or spreading purple spot", points: 10 });
+    }
+
+    if (answers.movementAbility === 'cannot_move') {
+      score += 20;
+      breakdown.push({ factor: "Inability to move the injured joint at all", points: 20 });
+    }
+
+    if (aiResult) {
+      if (aiResult.swellingPrediction === 'severe' && answers.swelling !== 'severe') {
+        score += 10;
+        breakdown.push({ factor: "AI Visual Swelling Validation override", points: 10 });
+      }
+    }
+
+    // Determine Risk level
+    let riskLevel = "LOW";
+    let recs = { level: "LOW", title: "", actions: [] };
+
+    if (score <= 20) {
+      riskLevel = "LOW";
+      recs = {
+        level: "LOW",
+        title: t.lowRiskTitle,
+        actions: lang === 'hi' ? [
+          "प्रभावित अंग को आराम (Rest) दें और सूखी बर्फ से सेक (Ice) करें।",
+          "सूजन कम करने के लिए जोड़ पर हल्के संपीड़न की पट्टी (Compression) बांधें।",
+          "चोटिल अंग को ऊंचाई (Elevation) पर रखें और 48-72 घंटों तक निगरानी रखें।"
+        ] : [
+          "Apply the R.I.C.E. protocol (Rest, Ice, Compression, Elevation) to reduce pain and swelling.",
+          "Rest the joint and monitor for the next 48-72 hours.",
+          "Seek medical evaluation if your pain increases or you still cannot bear weight after 3 days."
+        ]
+      };
+    } else if (score <= 50) {
+      riskLevel = "MODERATE";
+      recs = {
+        level: "MODERATE",
+        title: t.modRiskTitle,
+        actions: lang === 'hi' ? [
+          "R.I.C.E. प्रोटोकॉल को तुरंत लागू करें।",
+          "जोड़ पर दबाव डालने से बचें। चलने के लिए बैसाखी या सहारे का उपयोग करें।",
+          "अगले 24-48 घंटों के भीतर डॉक्टर से अपॉइंटमेंट लें।"
+        ] : [
+          "Implement the R.I.C.E. protocol immediately.",
+          "Avoid putting weight on the limb. Use support if walking.",
+          "Book a medical consultation/visit within the next 24-48 hours for clinical evaluation.",
+          "Monitor for skin temperature changes or tingling."
+        ]
+      };
+    } else {
+      riskLevel = "HIGH";
+      recs = {
+        level: "HIGH",
+        title: t.highRiskTitle,
+        actions: lang === 'hi' ? [
+          "चोटिल पैर/हाथ पर बिल्कुल भी वजन न डालें।",
+          "जोड़ को एक सपोर्ट या स्प्लिंट का उपयोग करके स्थिर (Immobilize) करें।",
+          "आज ही किसी हड्डी के डॉक्टर या आपातकालीन केंद्र पर जाएं। एक्स-रे की आवश्यकता है।"
+        ] : [
+          "Do NOT bear any weight on the injured limb.",
+          "Immobilize the joint using a splint or padding.",
+          "Visit an urgent care center or doctor today.",
+          "An X-ray evaluation is strongly recommended based on clinical decision rules."
+        ]
+      };
+    }
+
+    return {
+      assessmentId: "assess_" + Math.random().toString(36).substr(2, 9),
+      injuryArea,
+      injuryTimeAgo: answers.injuryTimeAgo,
+      injuryMechanism: answers.howInjured,
+      soundHeard: answers.soundHeard,
+      symptoms: { ...answers },
+      ottawaResults: getOttawaAnswers(),
+      redFlags: {
+        boneProtruding: answers.boneProtruding,
+        numbnessBelow: answers.numbnessBelow,
+        blueColdBelow: answers.blueColdBelow,
+        unrelivedPain: answers.unrelivedPain
+      },
+      riskScore: score,
+      riskLevel,
+      scoreBreakdown: breakdown,
+      recommendations: recs,
+      imageUrl: injuryPhotoUrl,
+      createdAt: new Date().toISOString()
+    };
+  };
+
+  const getOttawaAnswers = () => {
+    if (injuryArea === 'ankle') {
+      return {
+        canWalkImmediately: answers.canWalkImmediately,
+        canWalkNow: answers.canWalkNow,
+        lateralMalleolusTenderness: answers.lateralMalleolusTenderness,
+        medialMalleolusTenderness: answers.medialMalleolusTenderness
+      };
+    } else if (injuryArea === 'foot') {
+      return {
+        canWalkImmediately: answers.canWalkImmediately,
+        canWalkNow: answers.canWalkNow,
+        fifthMetatarsalTenderness: answers.fifthMetatarsalTenderness,
+        navicularTenderness: answers.navicularTenderness
+      };
+    } else if (injuryArea === 'knee') {
+      return {
+        canWalkImmediately: answers.canWalkImmediately,
+        canWalkNow: answers.canWalkNow,
+        patellarTenderness: answers.patellarTenderness,
+        fibularHeadTenderness: answers.fibularHeadTenderness,
+        kneeFlexion90: answers.kneeFlexion90
+      };
+    } else {
+      return {
+        snuffboxTenderness: answers.snuffboxTenderness,
+        scaphoidTubercleTenderness: answers.scaphoidTubercleTenderness,
+        thumbCompressionPain: answers.thumbCompressionPain,
+        gripPain: answers.gripPain
+      };
+    }
+  };
+
+  // --- TRIGGER MOCK AI inference ---
+  const runAiAnalysis = () => {
+    setIsAnalyzing(true);
+    setAnalysisLog([]);
+    
+    const logs = [
+      "🔄 Initializing PyTorch computer vision engine...",
+      "📸 Image format validation: JPEG/PNG check passed.",
+      "🤖 Loading ResNet50-MobileNetV3 hybrid weights...",
+      "🎨 Performing Tensor normalization and resizing to 224x224...",
+      "🧠 Running CNN forward pass: feature extraction on convolutional layers...",
+      "🔍 Saliency map generated. Grad-CAM focusing on localized joint swelling...",
+      "📉 Classifying soft-tissue swelling index...",
+      "📊 Extracting RGB bruising metrics: subcutaneous hematoma pattern detected...",
+      "✅ AI inference completed successfully."
+    ];
+
+    let currentLogIndex = 0;
+    const interval = setInterval(() => {
+      if (currentLogIndex < logs.length) {
+        setAnalysisLog(prev => [...prev, logs[currentLogIndex]]);
+        currentLogIndex++;
+      } else {
+        clearInterval(interval);
+        
+        const swellingResult = answers.swelling === 'none' ? 'mild' : answers.swelling;
+        const bruiseResult = answers.bruising === 'none' ? 'mild' : answers.bruising;
+        
+        setAiResult({
+          swellingPrediction: swellingResult,
+          bruisingPrediction: bruiseResult,
+          confidenceScore: 0.945,
+          alignmentCheck: "Normal joint alignment detected. No gross visual bone protrusion."
+        });
+        
+        setIsAnalyzing(false);
+      }
+    }, 400);
+  };
+
+  const handleFinishAssessment = async () => {
+    const defaultPayload = {
+      userId: currentUser ? currentUser.email : "guest_user",
+      injuryArea: injuryArea,
+      age: answers.age,
+      injuryTimeAgo: answers.injuryTimeAgo,
+      howInjured: answers.howInjured,
+      soundHeard: answers.soundHeard,
+      symptoms: {
+        painLevel: answers.painLevel,
+        painType: answers.painType,
+        painIncreases: answers.painIncreases,
+        painReliefWithMeds: answers.painReliefWithMeds,
+        swelling: answers.swelling,
+        bruising: answers.bruising,
+        deformity: answers.deformity,
+        skinColor: answers.skinColor,
+        tightTense: answers.tightTense,
+        movementAbility: answers.movementAbility,
+        sideComparison: answers.sideComparison
+      },
+      ottawaResults: {
+        canWalkImmediately: answers.canWalkImmediately,
+        canWalkNow: answers.canWalkNow,
+        lateralMalleolusTenderness: answers.lateralMalleolusTenderness,
+        medialMalleolusTenderness: answers.medialMalleolusTenderness,
+        fifthMetatarsalTenderness: answers.fifthMetatarsalTenderness,
+        navicularTenderness: answers.navicularTenderness,
+        patellarTenderness: answers.patellarTenderness,
+        fibularHeadTenderness: answers.fibularHeadTenderness,
+        kneeFlexion90: answers.kneeFlexion90,
+        snuffboxTenderness: answers.snuffboxTenderness,
+        scaphoidTubercleTenderness: answers.scaphoidTubercleTenderness,
+        thumbCompressionPain: answers.thumbCompressionPain,
+        gripPain: answers.gripPain
+      },
+      redFlags: {
+        boneProtruding: answers.boneProtruding,
+        numbnessBelow: answers.numbnessBelow,
+        blueColdBelow: answers.blueColdBelow,
+        unrelivedPain: answers.unrelivedPain
+      },
+      imageUrl: injuryPhotoUrl || null,
+      comparisonImageUrl: comparisonPhotoUrl || null,
+      lang: lang
+    };
+
+    let finalResult;
+    try {
+      console.log("[API] Sending assessment payload to backend...");
+      const response = await fetch('http://127.0.0.1:8000/api/v1/assess', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(defaultPayload)
+      });
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      
+      const data = await response.json();
+      console.log("[API] Assessment response received successfully from FastAPI:", data);
+      finalResult = data;
+    } catch (e) {
+      console.warn("[API] FastAPI backend offline or failed. Falling back to local scoring engine.", e);
+      finalResult = calculateResult();
+    }
+
+    const historyKey = currentUser ? `injuryiq_history_${currentUser.email}` : 'injuryiq_history';
+    const updatedHistory = [finalResult, ...history];
+    setHistory(updatedHistory);
+    localStorage.setItem(historyKey, JSON.stringify(updatedHistory));
+    setSelectedHistoryItem(finalResult);
+    setView('details');
+  };
+
+  const handleDeleteHistory = (id) => {
+    const updated = history.filter(item => item.assessmentId !== id);
+    setHistory(updated);
+    const historyKey = currentUser ? `injuryiq_history_${currentUser.email}` : 'injuryiq_history';
+    localStorage.setItem(historyKey, JSON.stringify(updated));
+    if (activeTrackingId === id) {
+      setActiveTrackingId('');
+      localStorage.removeItem(`injuryiq_active_tracking_${currentUser.email}`);
+    }
+  };
+
+  if (!currentUser) {
+    return (
+      <div className="container" style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh', justifyContent: 'center', alignItems: 'center', maxWidth: '440px', margin: '0 auto' }}>
+        {/* Logo and Header */}
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginBottom: '2rem', textAlign: 'center' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', fontSize: '2.5rem', fontWeight: 800 }}>
+            <Activity size={44} className="glow-primary" style={{ color: 'var(--primary)' }} />
+            <span style={{ color: darkMode ? 'var(--text-dark-primary)' : 'var(--text-light-primary)' }}>InjuryIQ</span>
+            <span style={{ color: 'var(--primary)' }}>AI</span>
+          </div>
+          <p style={{ color: darkMode ? 'var(--text-dark-secondary)' : 'var(--text-light-secondary)', marginTop: '0.5rem', fontSize: '0.9rem', fontWeight: 500 }}>
+            AI-Assisted Joint Injury Triage System
+          </p>
+        </div>
+
+        {/* Login/Signup Glass Card */}
+        <div className="glass-panel" style={{ width: '100%', padding: '2rem', display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+          {/* Card Top Nav (Lang + Theme) */}
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--border-dark)', paddingBottom: '0.75rem', marginBottom: '0.25rem' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', background: 'rgba(255,255,255,0.05)', padding: '0.3rem 0.6rem', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-dark)', fontSize: '0.8rem' }}>
+              <Globe size={14} />
+              <select 
+                value={lang} 
+                onChange={(e) => setLang(e.target.value)}
+                style={{ background: 'none', border: 'none', color: 'inherit', fontSize: '0.8rem', fontWeight: 600, outline: 'none', cursor: 'pointer' }}
+              >
+                <option value="en" style={{ background: 'var(--bg-dark)', color: '#fff' }}>English</option>
+                <option value="hi" style={{ background: 'var(--bg-dark)', color: '#fff' }}>हिन्दी (Hindi)</option>
+                <option value="hn" style={{ background: 'var(--bg-dark)', color: '#fff' }}>Hinglish</option>
+              </select>
+            </div>
+            
+            <button 
+              className="btn btn-secondary" 
+              onClick={() => setDarkMode(!darkMode)}
+              style={{ padding: '0.4rem', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+            >
+              {darkMode ? <Sun size={14} /> : <Moon size={14} />}
+            </button>
+          </div>
+
+          {/* Mode Switcher Tabs */}
+          <div style={{ display: 'flex', background: 'rgba(255,255,255,0.04)', borderRadius: 'var(--radius-sm)', padding: '0.2rem', border: '1px solid var(--border-dark)' }}>
+            <button 
+              style={{ 
+                flex: 1, 
+                padding: '0.5rem', 
+                border: 'none', 
+                borderRadius: 'var(--radius-sm)', 
+                background: authMode === 'login' ? 'var(--primary)' : 'transparent',
+                color: '#fff',
+                fontWeight: 600,
+                cursor: 'pointer',
+                transition: 'var(--transition-smooth)'
+              }}
+              onClick={() => { setAuthMode('login'); setAuthError(''); }}
+            >
+              {lang === 'hi' ? 'लॉगिन' : (lang === 'hn' ? 'Login' : 'Login')}
+            </button>
+            <button 
+              style={{ 
+                flex: 1, 
+                padding: '0.5rem', 
+                border: 'none', 
+                borderRadius: 'var(--radius-sm)', 
+                background: authMode === 'signup' ? 'var(--primary)' : 'transparent',
+                color: '#fff',
+                fontWeight: 600,
+                cursor: 'pointer',
+                transition: 'var(--transition-smooth)'
+              }}
+              onClick={() => { setAuthMode('signup'); setAuthError(''); }}
+            >
+              {lang === 'hi' ? 'रजिस्टर' : (lang === 'hn' ? 'Sign Up' : 'Sign Up')}
+            </button>
+          </div>
+
+          {/* Error Alert */}
+          {authError && (
+            <div style={{ background: 'rgba(239, 68, 68, 0.1)', color: 'var(--color-emergency)', border: '1px solid rgba(239, 68, 68, 0.3)', borderRadius: 'var(--radius-sm)', padding: '0.6rem', fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <AlertTriangle size={14} />
+              <span>{authError}</span>
+            </div>
+          )}
+
+          {/* Fields */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.9rem' }}>
+            {authMode === 'signup' && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>
+                <label style={{ fontSize: '0.8rem', fontWeight: 600 }}>{lang === 'hi' ? 'पूरा नाम' : 'Full Name'}</label>
+                <input 
+                  type="text" 
+                  placeholder={lang === 'hi' ? 'अपना नाम दर्ज करें' : 'Enter your name'} 
+                  value={authName}
+                  onChange={(e) => setAuthName(e.target.value)}
+                  style={{ width: '100%', padding: '0.65rem 0.8rem', background: 'rgba(255,255,255,0.03)', border: '1px solid var(--border-dark)', borderRadius: 'var(--radius-sm)', color: 'inherit', outline: 'none' }}
+                />
+              </div>
+            )}
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>
+              <label style={{ fontSize: '0.8rem', fontWeight: 600 }}>Email Address</label>
+              <input 
+                type="email" 
+                placeholder="you@example.com" 
+                value={authEmail}
+                onChange={(e) => setAuthEmail(e.target.value)}
+                style={{ width: '100%', padding: '0.65rem 0.8rem', background: 'rgba(255,255,255,0.03)', border: '1px solid var(--border-dark)', borderRadius: 'var(--radius-sm)', color: 'inherit', outline: 'none' }}
+              />
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>
+              <label style={{ fontSize: '0.8rem', fontWeight: 600 }}>Password</label>
+              <input 
+                type="password" 
+                placeholder="••••••••" 
+                value={authPassword}
+                onChange={(e) => setAuthPassword(e.target.value)}
+                style={{ width: '100%', padding: '0.65rem 0.8rem', background: 'rgba(255,255,255,0.03)', border: '1px solid var(--border-dark)', borderRadius: 'var(--radius-sm)', color: 'inherit', outline: 'none' }}
+              />
+            </div>
+          </div>
+
+          {/* Action buttons */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem', marginTop: '0.4rem' }}>
+            <button 
+              className="btn btn-primary" 
+              style={{ justifyContent: 'center', width: '100%', padding: '0.7rem', fontWeight: 700 }}
+              onClick={handleAuthSubmit}
+              disabled={isAuthLoading}
+            >
+              {isAuthLoading ? (
+                <RefreshCw size={16} style={{ animation: 'spin 1.5s linear infinite' }} />
+              ) : (
+                authMode === 'login' ? (lang === 'hi' ? 'लॉगिन करें' : 'Login') : (lang === 'hi' ? 'रजिस्टर करें' : 'Sign Up')
+              )}
+            </button>
+
+            <div style={{ display: 'flex', alignItems: 'center', margin: '0.25rem 0' }}>
+              <div style={{ flex: 1, height: '1px', background: 'var(--border-dark)' }}></div>
+              <span style={{ padding: '0 0.5rem', fontSize: '0.7rem', color: 'var(--text-dark-secondary)', textTransform: 'uppercase' }}>or</span>
+              <div style={{ flex: 1, height: '1px', background: 'var(--border-dark)' }}></div>
+            </div>
+
+            <button 
+              className="btn btn-secondary" 
+              style={{ justifyContent: 'center', width: '100%', padding: '0.7rem', gap: '0.5rem', display: 'flex', alignItems: 'center' }}
+              onClick={handleGoogleSignIn}
+              disabled={isAuthLoading}
+            >
+              <svg width="16" height="16" viewBox="0 0 18 18">
+                <path d="M17.64 9.2c0-.63-.06-1.25-.16-1.84H9v3.47h4.84c-.21 1.12-.84 2.07-1.79 2.7v2.24h2.9c1.7-1.57 2.69-3.88 2.69-6.57z" fill="#4285F4" />
+                <path d="M9 18c2.43 0 4.47-.8 5.96-2.18l-2.9-2.24c-.8.54-1.84.87-3.06.87-2.35 0-4.33-1.58-5.04-3.71H.95v2.3C2.43 15.89 5.5 18 9 18z" fill="#34A853" />
+                <path d="M3.96 10.74c-.18-.54-.28-1.12-.28-1.74s.1-1.2.28-1.74V4.96H.95C.35 6.17 0 7.55 0 9s.35 2.83.95 4.04l3.01-2.3z" fill="#FBBC05" />
+                <path d="M9 3.58c1.32 0 2.5.45 3.44 1.35L15 2.3C13.47.88 11.43 0 9 0 5.5 0 2.43 2.11.95 4.96l3.01 2.3c.71-2.13 2.69-3.71 5.04-3.71z" fill="#EA4335" />
+              </svg>
+              <span>{lang === 'hi' ? 'गूगल से लॉगिन करें' : 'Sign in with Google'}</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="container">
+      {/* --- TOP HEADLINE NAVIGATION --- */}
+      <header className="header-nav slide-in">
+        <div className="logo" onClick={() => setView('dashboard')} style={{ cursor: 'pointer' }}>
+          <Activity size={28} className="glow-primary" />
+          <span>InjuryIQ</span>AI
+        </div>
+        
+        <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
+          {/* Language Selector Dropdown */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', background: 'rgba(255,255,255,0.05)', padding: '0.4rem 0.8rem', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-dark)' }}>
+            <Globe size={16} />
+            <select 
+              value={lang} 
+              onChange={(e) => setLang(e.target.value)}
+              style={{ background: 'none', border: 'none', color: 'inherit', fontStyle: 'inherit', fontWeight: 600, outline: 'none', cursor: 'pointer' }}
+            >
+              <option value="en" style={{ background: 'var(--bg-dark)', color: '#fff' }}>English</option>
+              <option value="hi" style={{ background: 'var(--bg-dark)', color: '#fff' }}>हिन्दी (Hindi)</option>
+              <option value="hn" style={{ background: 'var(--bg-dark)', color: '#fff' }}>Hinglish</option>
+            </select>
+          </div>
+
+          <button 
+            className="btn btn-secondary" 
+            onClick={() => setDarkMode(!darkMode)}
+            style={{ padding: '0.5rem', borderRadius: '50%' }}
+          >
+            {darkMode ? <Sun size={18} /> : <Moon size={18} />}
+          </button>
+          
+          <button className={`btn ${view === 'dashboard' ? 'btn-primary' : 'btn-secondary'}`} onClick={() => setView('dashboard')}>
+            Dashboard
+          </button>
+          <button className={`btn ${view === 'history' ? 'btn-primary' : 'btn-secondary'}`} onClick={() => setView('history')}>
+            History
+          </button>
+          {activeTrackingId && (
+            <button className={`btn ${view === 'recovery' ? 'btn-primary' : 'btn-secondary'}`} onClick={() => setView('recovery')}>
+              {lang === 'hi' ? 'रिकवरी प्रगति' : (lang === 'hn' ? 'Recovery Progress' : 'Recovery Progress')}
+            </button>
+          )}
+          <button className="btn btn-primary glow-primary" onClick={handleStartNewAssessment}>
+            {t.startNew}
+          </button>
+          <button className="btn btn-secondary" style={{ border: '1px solid rgba(239, 68, 68, 0.3)', color: 'var(--color-emergency)' }} onClick={handleLogout}>
+            Logout
+          </button>
+        </div>
+      </header>
+
+      {/* --- SCREEN 1: DASHBOARD VIEW --- */}
+      {view === 'dashboard' && (
+        <div className="dashboard-grid fade-in">
+          <div>
+            <div className="glass-panel" style={{ padding: '2rem', marginBottom: '2rem' }}>
+              <h2 style={{ fontSize: '1.8rem', fontWeight: 700 }}>
+                {lang === 'hi' ? `स्वागत है, ${currentUser.name} 👋` : `Welcome, ${currentUser.name} 👋`}
+              </h2>
+              <p style={{ color: darkMode ? 'var(--text-dark-secondary)' : 'var(--text-light-secondary)' }}>
+                {t.appSub}
+              </p>
+              <div style={{ display: 'flex', gap: '1rem', marginTop: '1.5rem', flexWrap: 'wrap' }}>
+                <button className="btn btn-primary glow-primary" onClick={handleStartNewAssessment}>
+                  {t.startNew}
+                </button>
+                <button className="btn btn-secondary" onClick={() => setView('history')}>
+                  {t.viewRecords}
+                </button>
+                <button 
+                  className="btn" 
+                  style={{ background: 'var(--color-emergency)', color: 'white', fontWeight: 'bold' }}
+                  onClick={() => setIsSosOpen(true)}
+                >
+                  <AlertTriangle size={16} /> {lang === 'hi' ? "आपातकालीन SOS" : (lang === 'hn' ? "Emergency SOS" : "Emergency SOS")}
+                </button>
+              </div>
+            </div>
+
+            {activeTrackingId && (() => {
+              const trackedItem = history.find(item => item.assessmentId === activeTrackingId);
+              if (!trackedItem) return null;
+              return (
+                <div className="glass-panel glow-primary slide-in" style={{ padding: '1.5rem', marginBottom: '2rem', background: 'rgba(59, 130, 246, 0.08)', border: '1px solid var(--primary)' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
+                    <div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--primary)', fontWeight: 700, fontSize: '1.1rem' }}>
+                        <Activity size={20} />
+                        <span>{lang === 'hi' ? "सक्रिय रिकवरी ट्रैकिंग" : (lang === 'hn' ? "Active Recovery Tracking Chalu Hai" : "Active Recovery Tracking")}</span>
+                      </div>
+                      <p style={{ margin: '0.25rem 0 0 0', fontSize: '0.9rem', color: darkMode ? 'var(--text-dark-secondary)' : 'var(--text-light-secondary)' }}>
+                        {lang === 'hi' 
+                          ? `${trackedItem.injuryArea} की चोट के लिए दैनिक सुधार ट्रैक करें।` 
+                          : (lang === 'hn' 
+                              ? `${trackedItem.injuryArea} injury ke liye daily healing progress track karein.` 
+                              : `Tracking healing progress for your ${trackedItem.injuryArea} injury.`)}
+                      </p>
+                    </div>
+                    <button className="btn btn-primary" onClick={() => setView('recovery')}>
+                      {lang === 'hi' ? "प्रगति देखें" : (lang === 'hn' ? "Progress Dekhein" : "View Dashboard")}
+                    </button>
+                  </div>
+                </div>
+              );
+            })()}
+
+            {/* Quick First Aid Info Card */}
+            <div className="glass-panel" style={{ padding: '2rem' }}>
+              <h3 style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <Heart size={20} style={{ color: 'var(--color-emergency)' }} /> {t.riceCompanion}
+              </h3>
+              <p style={{ fontSize: '0.95rem' }}>
+                {lang === 'hi' 
+                  ? "चोट के दर्द और सूजन को नियंत्रित करने के लिए विश्राम (Rest), बर्फ (Ice), संपीड़न (Compression) और ऊंचाई (Elevation) का उपयोग करें।" 
+                  : (lang === 'hn' 
+                      ? "Injury pain aur sujan ko control karne ke liye Rest, Ice, Compression aur Elevation ka use karein." 
+                      : "First-aid management for soft-tissue sprains using Rest, Ice, Compression, and Elevation. Try our clinical active ice timer:"
+                    )}
+              </p>
+              
+              <div className="glass-panel" style={{ padding: '1.5rem', marginTop: '1rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '1.5rem', background: 'rgba(59, 130, 246, 0.08)' }}>
+                <div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                    <Clock size={16} />
+                    <span style={{ fontWeight: 600 }}>{t.iceTimerTitle}</span>
+                  </div>
+                  <p style={{ margin: '0.25rem 0 0 0', fontSize: '0.85rem', color: darkMode ? 'var(--text-dark-secondary)' : 'var(--text-light-secondary)' }}>
+                    {t.iceTimerSub}
+                  </p>
+                </div>
+                
+                <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem' }}>
+                  <div style={{ fontSize: '1.8rem', fontWeight: 700, fontFamily: 'monospace' }}>
+                    {formatIceTime(iceTime)}
+                  </div>
+                  <div style={{ display: 'flex', gap: '0.5rem' }}>
+                    <button className="btn btn-primary" style={{ padding: '0.5rem 1rem', fontSize: '0.85rem' }} onClick={toggleIceTimer}>
+                      {iceTimerRunning ? (lang === 'hi' ? "रोकें" : "Pause") : (lang === 'hi' ? "शुरू" : "Start")}
+                    </button>
+                    <button className="btn btn-secondary" style={{ padding: '0.5rem 1rem', fontSize: '0.85rem' }} onClick={resetIceTimer}>
+                      Reset
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Right Panel: Recent History & Status */}
+          <div>
+            <div className="glass-panel" style={{ padding: '1.5rem' }}>
+              <h3 style={{ fontSize: '1.2rem', marginBottom: '1.2rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <HistoryIcon size={18} /> {t.recentAssessments}
+              </h3>
+              
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                {history.slice(0, 3).map((item, idx) => (
+                  <div 
+                    key={idx} 
+                    className="glass-panel glass-panel-hover" 
+                    style={{ padding: '1rem', cursor: 'pointer', background: 'rgba(255,255,255,0.02)' }}
+                    onClick={() => {
+                      setSelectedHistoryItem(item);
+                      setView('details');
+                    }}
+                  >
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
+                      <span style={{ textTransform: 'capitalize', fontWeight: 600, fontSize: '0.95rem' }}>
+                        {lang === 'hi' ? (item.injuryArea === 'ankle' ? 'टखने की चोट' : item.injuryArea === 'knee' ? 'घुटने की चोट' : item.injuryArea === 'foot' ? 'पैर की चोट' : 'कलाई की चोट') : `${item.injuryArea} Injury`}
+                      </span>
+                      <span className={`badge badge-${item.riskLevel.toLowerCase()}`}>
+                        {item.riskLevel}
+                      </span>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8rem', color: darkMode ? 'var(--text-dark-secondary)' : 'var(--text-light-secondary)' }}>
+                      <span>Score: {item.riskScore}</span>
+                      <span>{new Date(item.createdAt).toLocaleDateString()}</span>
+                    </div>
+                  </div>
+                ))}
+                {history.length === 0 && (
+                  <p style={{ fontSize: '0.9rem', textAlign: 'center', color: 'var(--text-dark-secondary)', margin: '1rem 0' }}>
+                    {t.noAssessments}
+                  </p>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* --- SCREEN 2: MEDICAL DISCLAIMER SCREEN --- */}
+      {view === 'disclaimer' && (
+        <div className="slide-in" style={{ maxWidth: '600px', margin: '3rem auto' }}>
+          <div className="glass-panel" style={{ padding: '2.5rem', border: '1px solid rgba(239, 68, 68, 0.3)' }}>
+            <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '1rem', color: 'var(--color-emergency)' }}>
+              <ShieldAlert size={56} style={{ margin: '0 auto' }} />
+            </div>
+            <h2 style={{ textAlign: 'center', fontWeight: 700, color: 'var(--color-emergency)' }}>{t.disclaimerTitle}</h2>
+            
+            <p style={{ fontSize: '0.95rem', margin: '1.5rem 0' }}>
+              <strong>{t.disclaimerIntro}</strong> 
+            </p>
+            <div className="glass-panel" style={{ padding: '1rem', fontSize: '0.85rem', background: 'rgba(255,255,255,0.02)', margin: '1.5rem 0' }}>
+              <ul style={{ paddingLeft: '1.2rem', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                {t.disclaimerPoints.map((pt, index) => (
+                  <li key={index}>{pt}</li>
+                ))}
+              </ul>
+            </div>
+            
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', marginTop: '2rem' }}>
+              <button className="btn btn-primary" style={{ justifyContent: 'center', background: 'var(--color-emergency)' }} onClick={acceptDisclaimer}>
+                {t.acceptDisclaimer}
+              </button>
+              <button className="btn btn-secondary" style={{ justifyContent: 'center' }} onClick={() => setView('dashboard')}>
+                {t.cancel}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* --- SCREEN 3 & 4: QUESTIONNAIRE WIZARD --- */}
+      {view === 'questionnaire' && (
+        <div className="slide-in" style={{ maxWidth: '800px', margin: '0 auto' }}>
+          <div className="glass-panel" style={{ padding: '1rem 1.5rem', marginBottom: '1.5rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <div style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--primary)' }}>
+              {steps[currentStep].category} ({t.step} {currentStep + 1} {t.of} {steps.length})
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', flex: 1, margin: '0 2rem' }}>
+              <div style={{ background: 'rgba(255,255,255,0.08)', height: '6px', borderRadius: '3px', flex: 1, overflow: 'hidden' }}>
+                <div style={{ background: 'var(--primary)', height: '100%', width: `${((currentStep + 1) / steps.length) * 100}%`, transition: 'width 0.3s' }}></div>
+              </div>
+              <span style={{ fontSize: '0.8rem', fontWeight: 600 }}>{Math.round(((currentStep + 1) / steps.length) * 100)}%</span>
+            </div>
+            <button className="btn btn-secondary" style={{ padding: '0.35rem 0.75rem', fontSize: '0.8rem' }} onClick={resetAssessment}>
+              {t.abort}
+            </button>
+          </div>
+
+          <div className="glass-panel" style={{ padding: '2rem', minHeight: '350px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+            
+            {/* STEP 0: AREA SELECTION */}
+            {currentStep === 0 && (
+              <div className="fade-in">
+                <h3 style={{ fontSize: '1.4rem', fontWeight: 700, marginBottom: '1.5rem', textAlign: 'center' }}>{t.injuryLocationQuestion}</h3>
+                <p style={{ textAlign: 'center', color: darkMode ? 'var(--text-dark-secondary)' : 'var(--text-light-secondary)', marginBottom: '2rem' }}>
+                  {t.selectJointSubtitle}
+                </p>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '1rem' }}>
+                  {[
+                    { id: 'ankle', label: lang === 'hi' ? 'टखना (Ankle)' : 'Ankle (Takhna)' },
+                    { id: 'foot', label: lang === 'hi' ? 'पैर (Foot)' : 'Foot (Pair)' },
+                    { id: 'knee', label: lang === 'hi' ? 'घुटना (Knee)' : 'Knee (Ghuthna)' },
+                    { id: 'wrist', label: lang === 'hi' ? 'कलाई (Wrist)' : 'Wrist (Kalai)' }
+                  ].map((area) => (
+                    <div 
+                      key={area.id} 
+                      className={`glass-panel glass-panel-hover ${injuryArea === area.id ? 'glow-primary' : ''}`}
+                      style={{ 
+                        padding: '1.5rem', 
+                        textAlign: 'center', 
+                        cursor: 'pointer', 
+                        border: injuryArea === area.id ? '2px solid var(--primary)' : '1px solid var(--border-dark)',
+                        background: injuryArea === area.id ? 'rgba(59,130,246,0.1)' : 'rgba(255,255,255,0.02)'
+                      }}
+                      onClick={() => setInjuryArea(area.id)}
+                    >
+                      <Activity size={24} style={{ color: injuryArea === area.id ? 'var(--primary)' : 'inherit', marginBottom: '0.5rem' }} />
+                      <div style={{ fontWeight: 600, fontSize: '1.1rem' }}>{area.label}</div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* STEP 1: CONTEXT & TIMELINE */}
+            {currentStep === 1 && (
+              <div className="fade-in">
+                <h3 style={{ fontSize: '1.4rem', fontWeight: 700, marginBottom: '1.5rem' }}>{t.metadataTitle}</h3>
+                
+                <div style={{ marginBottom: '1.5rem' }}>
+                  <label style={{ display: 'block', fontWeight: 600, marginBottom: '0.5rem' }}>{t.ageLabel}</label>
+                  <input 
+                    type="number" 
+                    className="glass-panel" 
+                    value={answers.age}
+                    onChange={(e) => handleAnswerChange('age', parseInt(e.target.value))}
+                    style={{ width: '100px', padding: '0.75rem', fontSize: '1.1rem', color: 'inherit', textAlign: 'center' }}
+                  />
+                  {answers.age < 18 && (
+                    <p style={{ color: 'var(--color-moderate)', fontSize: '0.85rem', marginTop: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+                      <AlertTriangle size={14} /> {t.ageWarning}
+                    </p>
+                  )}
+                </div>
+
+                <div style={{ marginBottom: '1.5rem' }}>
+                  <label style={{ display: 'block', fontWeight: 600, marginBottom: '0.5rem' }}>{t.timelineLabel}</label>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                    {[
+                      { id: 'Less than 1 hour', label: lang === 'hi' ? 'ताजी चोट (1 घंटे से कम पहले)' : 'Fresh Injury (Less than 1 hour ago)' },
+                      { id: '1-6 hours', label: lang === 'hi' ? '1 से 6 घंटे पहले' : '1 to 6 hours ago' },
+                      { id: '6-24 hours', label: lang === 'hi' ? '6 से 24 घंटे पहले' : '6 to 24 hours ago' },
+                      { id: '1-3 days', label: lang === 'hi' ? '1 से 3 दिन पहले' : '1 to 3 days ago' },
+                      { id: 'More than 3 days', label: lang === 'hi' ? '3 दिन से अधिक पहले' : 'More than 3 days ago' }
+                    ].map(opt => (
+                      <label key={opt.id} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
+                        <input 
+                          type="radio" 
+                          name="injuryTimeAgo" 
+                          checked={answers.injuryTimeAgo === opt.id}
+                          onChange={() => handleAnswerChange('injuryTimeAgo', opt.id)}
+                        />
+                        {opt.label}
+                      </label>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* STEP 2: HOW IT HAPPENED */}
+            {currentStep === 2 && (
+              <div className="fade-in">
+                <h3 style={{ fontSize: '1.4rem', fontWeight: 700, marginBottom: '1.5rem' }}>{t.mechanismLabel}</h3>
+                
+                <div style={{ marginBottom: '1.5rem' }}>
+                  <label style={{ display: 'block', fontWeight: 600, marginBottom: '0.5rem' }}>{lang === 'hi' ? "चोट कैसे लगी?" : "How did the injury occur?"}</label>
+                  <select 
+                    className="glass-panel" 
+                    value={answers.howInjured}
+                    onChange={(e) => handleAnswerChange('howInjured', e.target.value)}
+                    style={{ width: '100%', padding: '0.75rem', fontSize: '1rem', color: 'inherit', background: 'var(--bg-dark)' }}
+                  >
+                    <option value="twist_roll">{lang === 'hi' ? 'जोड़ मुड़ जाना (मोच आना)' : 'Twisting / Rolling joint (Moch)'}</option>
+                    <option value="fall_height">{lang === 'hi' ? 'ऊंचाई से गिरना' : 'Fall from a height'}</option>
+                    <option value="foosh">{lang === 'hi' ? 'हाथ के बल गिरना' : 'Fall on Outstretched Hand (FOOSH)'}</option>
+                    <option value="sports_collision">{lang === 'hi' ? 'खेल के दौरान टक्कर लगना' : 'Sports collision'}</option>
+                    <option value="vehicle_accident">{lang === 'hi' ? 'बाइक या वाहन दुर्घटना' : 'Bike or vehicle slip/accident'}</option>
+                    <option value="direct_blow">{lang === 'hi' ? 'जोड़ पर सीधी चोट / प्रहार' : 'Direct hit / blunt blow'}</option>
+                    <option value="other">{lang === 'hi' ? 'अन्य कारण' : 'Other mechanism'}</option>
+                  </select>
+                </div>
+
+                <div style={{ marginBottom: '1.5rem' }}>
+                  <label style={{ display: 'block', fontWeight: 600, marginBottom: '0.5rem' }}>{t.soundLabel}</label>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                    {[
+                      { id: 'crack_snap', label: lang === 'hi' ? 'चटकने या टूटने की आवाज (Crack sound)' : 'Cracking or snapping sound' },
+                      { id: 'pop_snap', label: lang === 'hi' ? 'पॉप होने या लिगामेंट फटने की आवाज' : 'Popping or ligament snap sound' },
+                      { id: 'no_sound', label: lang === 'hi' ? 'कोई विशेष आवाज नहीं सुनाई दी' : 'No specific sound heard' },
+                      { id: 'not_sure', label: lang === 'hi' ? 'निश्चित नहीं / याद नहीं है' : 'Not sure / Do not remember' }
+                    ].map(opt => (
+                      <label key={opt.id} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
+                        <input 
+                          type="radio" 
+                          name="soundHeard" 
+                          checked={answers.soundHeard === opt.id}
+                          onChange={() => handleAnswerChange('soundHeard', opt.id)}
+                        />
+                        {opt.label}
+                      </label>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* STEP 3: PAIN Assessment */}
+            {currentStep === 3 && (
+              <div className="fade-in">
+                <h3 style={{ fontSize: '1.4rem', fontWeight: 700, marginBottom: '1.5rem' }}>Pain Assessment</h3>
+                
+                <div style={{ marginBottom: '2rem' }}>
+                  <label style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 600, marginBottom: '0.5rem' }}>
+                    <span>{t.painSliderLabel}</span>
+                    <span style={{ fontSize: '1.2rem', color: 'var(--primary)', fontWeight: 700 }}>{answers.painLevel}/10</span>
+                  </label>
+                  <input 
+                    type="range" 
+                    min="0" 
+                    max="10" 
+                    value={answers.painLevel}
+                    onChange={(e) => handleAnswerChange('painLevel', parseInt(e.target.value))}
+                    style={{ width: '100%', height: '8px', cursor: 'pointer' }}
+                  />
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '1.8rem', marginTop: '0.5rem' }}>
+                    <span>😊 <span style={{ fontSize: '0.7rem', display: 'block', textAlign: 'center' }}>0</span></span>
+                    <span>🙂 <span style={{ fontSize: '0.7rem', display: 'block', textAlign: 'center' }}>2</span></span>
+                    <span>😐 <span style={{ fontSize: '0.7rem', display: 'block', textAlign: 'center' }}>4</span></span>
+                    <span>😣 <span style={{ fontSize: '0.7rem', display: 'block', textAlign: 'center' }}>6</span></span>
+                    <span>😫 <span style={{ fontSize: '0.7rem', display: 'block', textAlign: 'center' }}>8</span></span>
+                    <span>😱 <span style={{ fontSize: '0.7rem', display: 'block', textAlign: 'center' }}>10</span></span>
+                  </div>
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem', marginBottom: '1.5rem' }}>
+                  <div>
+                    <label style={{ display: 'block', fontWeight: 600, marginBottom: '0.5rem' }}>{t.painTypeLabel}</label>
+                    <select 
+                      className="glass-panel" 
+                      value={answers.painType}
+                      onChange={(e) => handleAnswerChange('painType', e.target.value)}
+                      style={{ width: '100%', padding: '0.5rem', color: 'inherit', background: 'var(--bg-dark)' }}
+                    >
+                      <option value="sharp_stabbing">{lang === 'hi' ? 'तेज, चुभने वाला दर्द' : 'Sharp, stabbing pain'}</option>
+                      <option value="dull_aching">{lang === 'hi' ? 'हल्का, मीठा दर्द' : 'Dull, aching pain'}</option>
+                      <option value="throbbing">{lang === 'hi' ? 'लगातार धड़कने वाला दर्द' : 'Constant throbbing pain'}</option>
+                      <option value="burning">{lang === 'hi' ? 'जलन महसूस होना' : 'Burning pain'}</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label style={{ display: 'block', fontWeight: 600, marginBottom: '0.5rem' }}>{t.painReliefLabel}</label>
+                    <div style={{ display: 'flex', gap: '1rem', marginTop: '0.5rem' }}>
+                      <label style={{ cursor: 'pointer' }}>
+                        <input type="radio" name="painRelief" checked={answers.painReliefWithMeds === 'yes'} onChange={() => handleAnswerChange('painReliefWithMeds', 'yes')} /> {lang === 'hi' ? "हाँ" : "Yes"}
+                      </label>
+                      <label style={{ cursor: 'pointer' }}>
+                        <input type="radio" name="painRelief" checked={answers.painReliefWithMeds === 'no'} onChange={() => handleAnswerChange('painReliefWithMeds', 'no')} /> {lang === 'hi' ? "नहीं (दर्द बना रहता है)" : "No (Pain persists)"}
+                      </label>
+                    </div>
+                  </div>
+                </div>
+
+                <div>
+                  <label style={{ display: 'block', fontWeight: 600, marginBottom: '0.5rem' }}>{t.painIncreasesLabel}</label>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
+                    {[
+                      { id: 'constant_rest', label: lang === 'hi' ? 'आराम करते समय भी दर्द होना' : 'Constant pain even at rest' },
+                      { id: 'when_moving', label: lang === 'hi' ? 'जोड़ हिलाने पर' : 'When moving the joint' },
+                      { id: 'when_touching', label: lang === 'hi' ? 'दबाने या छूने पर' : 'When pressing/touching the joint' },
+                      { id: 'when_bearing_weight', label: lang === 'hi' ? 'वजन डालने/खड़े होने पर' : 'When putting weight/standing' }
+                    ].map(opt => (
+                      <button 
+                        key={opt.id}
+                        type="button"
+                        className={`btn ${answers.painIncreases.includes(opt.id) ? 'btn-primary' : 'btn-secondary'}`}
+                        style={{ padding: '0.4rem 0.8rem', fontSize: '0.85rem' }}
+                        onClick={() => handlePainIncreases(opt.id)}
+                      >
+                        {opt.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* STEP 4: PHYSICAL VISUAL SIGNS */}
+            {currentStep === 4 && (
+              <div className="fade-in">
+                <h3 style={{ fontSize: '1.4rem', fontWeight: 700, marginBottom: '1.5rem' }}>Physical & Visual Signs</h3>
+                
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem', marginBottom: '1.5rem' }}>
+                  <div>
+                    <label style={{ display: 'block', fontWeight: 600, marginBottom: '0.5rem' }}>{t.swellingLabel}</label>
+                    <select 
+                      className="glass-panel" 
+                      value={answers.swelling}
+                      onChange={(e) => handleAnswerChange('swelling', e.target.value)}
+                      style={{ width: '100%', padding: '0.5rem', color: 'inherit', background: 'var(--bg-dark)' }}
+                    >
+                      <option value="none">{lang === 'hi' ? 'कोई सूजन नहीं' : 'None'}</option>
+                      <option value="mild">{lang === 'hi' ? 'हल्की सूजन' : 'Mild'}</option>
+                      <option value="moderate">{lang === 'hi' ? 'स्पष्ट रूप से सूजन' : 'Moderate'}</option>
+                      <option value="severe">{lang === 'hi' ? 'अत्यधिक सूजन (तनी हुई त्वचा)' : 'Severe (stretched skin)'}</option>
+                    </select>
+                  </div>
+                  
+                  <div>
+                    <label style={{ display: 'block', fontWeight: 600, marginBottom: '0.5rem' }}>{t.bruisingLabel}</label>
+                    <select 
+                      className="glass-panel" 
+                      value={answers.bruising}
+                      onChange={(e) => handleAnswerChange('bruising', e.target.value)}
+                      style={{ width: '100%', padding: '0.5rem', color: 'inherit', background: 'var(--bg-dark)' }}
+                    >
+                      <option value="none">{lang === 'hi' ? 'कोई नील नहीं' : 'None'}</option>
+                      <option value="mild">{lang === 'hi' ? 'हल्का लाल/नीला दाग' : 'Small spot'}</option>
+                      <option value="large_area">{lang === 'hi' ? 'गहरे रंग का बड़ा नील' : 'Large area'}</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem', marginBottom: '1.5rem' }}>
+                  <div>
+                    <label style={{ display: 'block', fontWeight: 600, marginBottom: '0.5rem' }}>{t.deformityLabel}</label>
+                    <p style={{ margin: '0 0 0.5rem 0', fontSize: '0.75rem', color: 'var(--text-dark-secondary)' }}>
+                      {t.deformitySub}
+                    </p>
+                    <div style={{ display: 'flex', gap: '1rem' }}>
+                      <label style={{ cursor: 'pointer', color: 'var(--color-emergency)' }}>
+                        <input type="radio" name="deformity" checked={answers.deformity === 'yes'} onChange={() => handleAnswerChange('deformity', 'yes')} /> {lang === 'hi' ? 'हाँ (दृश्य विकृति)' : 'Yes'}
+                      </label>
+                      <label style={{ cursor: 'pointer' }}>
+                        <input type="radio" name="deformity" checked={answers.deformity === 'no'} onChange={() => handleAnswerChange('deformity', 'no')} /> {lang === 'hi' ? 'नहीं (संरेखित है)' : 'No'}
+                      </label>
+                    </div>
+                  </div>
+
+                  <div>
+                    <label style={{ display: 'block', fontWeight: 600, marginBottom: '0.5rem' }}>{t.skinColorLabel}</label>
+                    <select 
+                      className="glass-panel" 
+                      value={answers.skinColor}
+                      onChange={(e) => handleAnswerChange('skinColor', e.target.value)}
+                      style={{ width: '100%', padding: '0.5rem', color: 'inherit', background: 'var(--bg-dark)' }}
+                    >
+                      <option value="normal">{lang === 'hi' ? 'सामान्य त्वचा का रंग' : 'Normal skin color'}</option>
+                      <option value="red">{lang === 'hi' ? 'लाल / छूने पर गर्म' : 'Red / Warm'}</option>
+                      <option value="blue_purple">{lang === 'hi' ? 'नीला / बैंगनी (खराब रक्त प्रवाह)' : 'Blue / Purple'}</option>
+                      <option value="pale_white">{lang === 'hi' ? 'पीला / सफेद और ठंडा (गंभीर)' : 'Pale / White and cold'}</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', fontWeight: 600 }}>
+                    <input 
+                      type="checkbox" 
+                      checked={answers.tightTense}
+                      onChange={(e) => handleAnswerChange('tightTense', e.target.checked)}
+                    />
+                    {t.skinTightCheckbox}
+                  </label>
+                </div>
+              </div>
+            )}
+
+            {/* STEP 5: TENDERNESS LANDMARKS check */}
+            {currentStep === 5 && (
+              <div className="fade-in">
+                <h3 style={{ fontSize: '1.4rem', fontWeight: 700, marginBottom: '0.5rem' }}>{lang === 'hi' ? "हड्डी में दर्द का सत्यापन (Ottawa Rules)" : "Interactive Bone Tenderness Checklist"}</h3>
+                <p style={{ fontSize: '0.85rem', color: darkMode ? 'var(--text-dark-secondary)' : 'var(--text-light-secondary)', marginBottom: '1.5rem' }}>
+                  {lang === 'hi' ? "नीचे दिए गए चित्र के हॉटस्पॉट पर क्लिक करें। ओटावा नियम पीले रंग में चिह्नित हैं।" : "Tapping these hotspots toggles bone tenderness. Ottawa Rules check is highlighted in yellow."}
+                </p>
+
+                {/* ANKLE */}
+                {injuryArea === 'ankle' && (
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.2fr', gap: '1.5rem', alignItems: 'center' }}>
+                    <div style={{ display: 'flex', justifyContent: 'center' }}>
+                      <svg width="200" height="200" viewBox="0 0 100 100" style={{ background: 'rgba(255,255,255,0.02)', borderRadius: '12px', border: '1px dashed var(--border-dark)' }}>
+                        <path d="M40 20 L40 70 L50 85 L65 85 L60 70 L55 20 Z" fill="rgba(255,255,255,0.1)" stroke="#555" strokeWidth="1" />
+                        <circle cx="50" cy="80" r="10" fill="none" stroke="#fff" strokeWidth="0.5" strokeDasharray="2" />
+                        <text x="35" y="15" fill="#aaa" fontSize="4">Tibia/Fibula</text>
+                        
+                        <circle 
+                          cx="60" 
+                          cy="78" 
+                          r="6" 
+                          fill={answers.lateralMalleolusTenderness ? "var(--color-high)" : "rgba(59, 130, 246, 0.4)"} 
+                          stroke={answers.lateralMalleolusTenderness ? "#fff" : "none"}
+                          strokeWidth="1"
+                          style={{ cursor: 'pointer', transition: 'all 0.2s' }}
+                          onClick={() => handleAnswerChange('lateralMalleolusTenderness', !answers.lateralMalleolusTenderness)}
+                        />
+                        <text x="68" y="80" fill={answers.lateralMalleolusTenderness ? "var(--color-high)" : "#888"} fontSize="5" fontWeight="bold">Lateral</text>
+
+                        <circle 
+                          cx="38" 
+                          cy="78" 
+                          r="6" 
+                          fill={answers.medialMalleolusTenderness ? "var(--color-high)" : "rgba(59, 130, 246, 0.4)"} 
+                          stroke={answers.medialMalleolusTenderness ? "#fff" : "none"}
+                          strokeWidth="1"
+                          style={{ cursor: 'pointer', transition: 'all 0.2s' }}
+                          onClick={() => handleAnswerChange('medialMalleolusTenderness', !answers.medialMalleolusTenderness)}
+                        />
+                        <text x="12" y="80" fill={answers.medialMalleolusTenderness ? "var(--color-high)" : "#888"} fontSize="5" fontWeight="bold">Medial</text>
+                      </svg>
+                    </div>
+
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                      <div style={{ fontSize: '0.9rem', fontWeight: 600 }}>{lang === 'hi' ? 'टखने के नियम:' : 'Ottawa Ankle Rules Questions:'}</div>
+                      <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
+                        <input type="checkbox" checked={answers.lateralMalleolusTenderness} onChange={(e) => handleAnswerChange('lateralMalleolusTenderness', e.target.checked)} />
+                        {lang === 'hi' ? "बाहरी हड्डी (Lateral Malleolus) में छूने पर दर्द" : "Tenderness at Lateral Malleolus (Outer bone)"}
+                      </label>
+                      <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
+                        <input type="checkbox" checked={answers.medialMalleolusTenderness} onChange={(e) => handleAnswerChange('medialMalleolusTenderness', e.target.checked)} />
+                        {lang === 'hi' ? "भीतरी हड्डी (Medial Malleolus) में छूने पर दर्द" : "Tenderness at Medial Malleolus (Inner bone)"}
+                      </label>
+                      <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
+                        <input type="checkbox" checked={!answers.canWalkImmediately} onChange={(e) => handleAnswerChange('canWalkImmediately', !e.target.checked)} />
+                        {lang === 'hi' ? "चोट के तुरंत बाद 4 कदम चलने में असमर्थ" : "Unable to walk 4 steps immediately"}
+                      </label>
+                      <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
+                        <input type="checkbox" checked={!answers.canWalkNow} onChange={(e) => handleAnswerChange('canWalkNow', !e.target.checked)} />
+                        {lang === 'hi' ? "अभी 4 कदम चलने में असमर्थ" : "Unable to walk 4 steps NOW"}
+                      </label>
+                    </div>
+                  </div>
+                )}
+
+                {/* FOOT */}
+                {injuryArea === 'foot' && (
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.2fr', gap: '1.5rem', alignItems: 'center' }}>
+                    <div style={{ display: 'flex', justifyContent: 'center' }}>
+                      <svg width="200" height="200" viewBox="0 0 100 100" style={{ background: 'rgba(255,255,255,0.02)', borderRadius: '12px', border: '1px dashed var(--border-dark)' }}>
+                        <path d="M25 40 Q40 30 75 40 T85 70 T50 85 T25 40 Z" fill="rgba(255,255,255,0.1)" stroke="#555" strokeWidth="1" />
+                        
+                        <circle 
+                          cx="72" 
+                          cy="55" 
+                          r="6" 
+                          fill={answers.fifthMetatarsalTenderness ? "var(--color-high)" : "rgba(59, 130, 246, 0.4)"} 
+                          stroke={answers.fifthMetatarsalTenderness ? "#fff" : "none"}
+                          strokeWidth="1"
+                          style={{ cursor: 'pointer' }}
+                          onClick={() => handleAnswerChange('fifthMetatarsalTenderness', !answers.fifthMetatarsalTenderness)}
+                        />
+                        <text x="75" y="65" fill={answers.fifthMetatarsalTenderness ? "var(--color-high)" : "#888"} fontSize="4.5" fontWeight="bold">5th Metatarsal</text>
+
+                        <circle 
+                          cx="38" 
+                          cy="50" 
+                          r="6" 
+                          fill={answers.navicularTenderness ? "var(--color-high)" : "rgba(59, 130, 246, 0.4)"} 
+                          stroke={answers.navicularTenderness ? "#fff" : "none"}
+                          strokeWidth="1"
+                          style={{ cursor: 'pointer' }}
+                          onClick={() => handleAnswerChange('navicularTenderness', !answers.navicularTenderness)}
+                        />
+                        <text x="12" y="52" fill={answers.navicularTenderness ? "var(--color-high)" : "#888"} fontSize="4.5" fontWeight="bold">Navicular</text>
+                      </svg>
+                    </div>
+
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                      <div style={{ fontSize: '0.9rem', fontWeight: 600 }}>{lang === 'hi' ? 'पैर के नियम:' : 'Ottawa Foot Rules Questions:'}</div>
+                      <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
+                        <input type="checkbox" checked={answers.fifthMetatarsalTenderness} onChange={(e) => handleAnswerChange('fifthMetatarsalTenderness', e.target.checked)} />
+                        {lang === 'hi' ? "पैर के बाहरी किनारे (5th Metatarsal) पर छूने पर दर्द" : "Tenderness at 5th Metatarsal base"}
+                      </label>
+                      <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
+                        <input type="checkbox" checked={answers.navicularTenderness} onChange={(e) => handleAnswerChange('navicularTenderness', e.target.checked)} />
+                        {lang === 'hi' ? "पैर की भीतरी नौकाकार हड्डी (Navicular) पर दर्द" : "Tenderness at Navicular bone"}
+                      </label>
+                      <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
+                        <input type="checkbox" checked={!answers.canWalkImmediately} onChange={(e) => handleAnswerChange('canWalkImmediately', !e.target.checked)} />
+                        {lang === 'hi' ? "चोट के तुरंत बाद 4 कदम चलने में असमर्थ" : "Unable to walk 4 steps immediately"}
+                      </label>
+                    </div>
+                  </div>
+                )}
+
+                {/* KNEE */}
+                {injuryArea === 'knee' && (
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.2fr', gap: '1.5rem', alignItems: 'center' }}>
+                    <div style={{ display: 'flex', justifyContent: 'center' }}>
+                      <svg width="200" height="200" viewBox="0 0 100 100" style={{ background: 'rgba(255,255,255,0.02)', borderRadius: '12px', border: '1px dashed var(--border-dark)' }}>
+                        <rect x="40" y="10" width="20" height="30" rx="3" fill="rgba(255,255,255,0.1)" stroke="#555" />
+                        <rect x="40" y="60" width="20" height="30" rx="3" fill="rgba(255,255,255,0.1)" stroke="#555" />
+                        
+                        <circle 
+                          cx="50" 
+                          cy="48" 
+                          r="8" 
+                          fill={answers.patellarTenderness ? "var(--color-high)" : "rgba(59, 130, 246, 0.4)"} 
+                          stroke={answers.patellarTenderness ? "#fff" : "none"}
+                          strokeWidth="1"
+                          style={{ cursor: 'pointer' }}
+                          onClick={() => handleAnswerChange('patellarTenderness', !answers.patellarTenderness)}
+                        />
+                        <text x="62" y="50" fill={answers.patellarTenderness ? "var(--color-high)" : "#888"} fontSize="4.5" fontWeight="bold">Patella</text>
+
+                        <circle 
+                          cx="63" 
+                          cy="65" 
+                          r="6" 
+                          fill={answers.fibularHeadTenderness ? "var(--color-high)" : "rgba(59, 130, 246, 0.4)"} 
+                          stroke={answers.fibularHeadTenderness ? "#fff" : "none"}
+                          strokeWidth="1"
+                          style={{ cursor: 'pointer' }}
+                          onClick={() => handleAnswerChange('fibularHeadTenderness', !answers.fibularHeadTenderness)}
+                        />
+                        <text x="68" y="72" fill={answers.fibularHeadTenderness ? "var(--color-high)" : "#888"} fontSize="4" fontWeight="bold">Fibula</text>
+                      </svg>
+                    </div>
+
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                      <div style={{ fontSize: '0.9rem', fontWeight: 600 }}>{lang === 'hi' ? 'घुटने के नियम:' : 'Ottawa Knee Rules Questions:'}</div>
+                      <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
+                        <input type="checkbox" checked={answers.patellarTenderness} onChange={(e) => handleAnswerChange('patellarTenderness', e.target.checked)} />
+                        {lang === 'hi' ? "घुटने की चक्की (Patella) पर छूने पर दर्द" : "Isolated tenderness of the Patella"}
+                      </label>
+                      <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
+                        <input type="checkbox" checked={answers.fibularHeadTenderness} onChange={(e) => handleAnswerChange('fibularHeadTenderness', e.target.checked)} />
+                        {lang === 'hi' ? "घुटने के बाहरी तरफ निचली हड्डी (Fibular Head) पर दर्द" : "Tenderness at Fibular Head"}
+                      </label>
+                      <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
+                        <input type="checkbox" checked={!answers.kneeFlexion90} onChange={(e) => handleAnswerChange('kneeFlexion90', !e.target.checked)} />
+                        {lang === 'hi' ? "घुटने को 90 डिग्री मोड़ने में असमर्थ" : "Unable to flex knee to 90 degrees"}
+                      </label>
+                    </div>
+                  </div>
+                )}
+
+                {/* WRIST */}
+                {injuryArea === 'wrist' && (
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.2fr', gap: '1.5rem', alignItems: 'center' }}>
+                    <div style={{ display: 'flex', justifyContent: 'center' }}>
+                      <svg width="200" height="200" viewBox="0 0 100 100" style={{ background: 'rgba(255,255,255,0.02)', borderRadius: '12px', border: '1px dashed var(--border-dark)' }}>
+                        <path d="M40 70 L40 50 Q30 40 30 20 L70 20 Q70 40 60 50 L60 70 Z" fill="rgba(255,255,255,0.1)" stroke="#555" />
+                        
+                        <circle 
+                          cx="36" 
+                          cy="46" 
+                          r="6" 
+                          fill={answers.snuffboxTenderness ? "var(--color-high)" : "rgba(59, 130, 246, 0.4)"} 
+                          stroke={answers.snuffboxTenderness ? "#fff" : "none"}
+                          strokeWidth="1"
+                          style={{ cursor: 'pointer' }}
+                          onClick={() => handleAnswerChange('snuffboxTenderness', !answers.snuffboxTenderness)}
+                        />
+                        <text x="12" y="48" fill={answers.snuffboxTenderness ? "var(--color-high)" : "#888"} fontSize="4.5" fontWeight="bold">Snuffbox</text>
+
+                        <circle 
+                          cx="46" 
+                          cy="56" 
+                          r="6" 
+                          fill={answers.scaphoidTubercleTenderness ? "var(--color-high)" : "rgba(59, 130, 246, 0.4)"} 
+                          stroke={answers.scaphoidTubercleTenderness ? "#fff" : "none"}
+                          strokeWidth="1"
+                          style={{ cursor: 'pointer' }}
+                          onClick={() => handleAnswerChange('scaphoidTubercleTenderness', !answers.scaphoidTubercleTenderness)}
+                        />
+                        <text x="54" y="60" fill={answers.scaphoidTubercleTenderness ? "var(--color-high)" : "#888"} fontSize="4" fontWeight="bold">Tubercle</text>
+                      </svg>
+                    </div>
+
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                      <div style={{ fontSize: '0.9rem', fontWeight: 600 }}>{lang === 'hi' ? 'कलाई (Scaphoid) की जांच:' : 'Scaphoid Fracture Checks:'}</div>
+                      <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
+                        <input type="checkbox" checked={answers.snuffboxTenderness} onChange={(e) => handleAnswerChange('snuffboxTenderness', e.target.checked)} />
+                        {lang === 'hi' ? "अंगूठे के निचले गड्ढे (Snuffbox) में छूने पर दर्द" : "Anatomical Snuffbox tenderness"}
+                      </label>
+                      <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
+                        <input type="checkbox" checked={answers.scaphoidTubercleTenderness} onChange={(e) => handleAnswerChange('scaphoidTubercleTenderness', e.target.checked)} />
+                        {lang === 'hi' ? "कलाई के आगे की हड्डी (Scaphoid Tubercle) पर दर्द" : "Scaphoid Tubercle tenderness"}
+                      </label>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* STEP 6: MOBILITY & FUNCTION */}
+            {currentStep === 6 && (
+              <div className="fade-in">
+                <h3 style={{ fontSize: '1.4rem', fontWeight: 700, marginBottom: '1.5rem' }}>Functional Assessment</h3>
+                
+                <div style={{ marginBottom: '1.5rem' }}>
+                  <label style={{ display: 'block', fontWeight: 600, marginBottom: '0.5rem' }}>{lang === 'hi' ? "हिलने-डुलने की क्षमता (Range of Motion):" : "Movement Ability (Range of Motion):"}</label>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                    {[
+                      { id: 'normal', label: lang === 'hi' ? 'पूर्ण सामान्य मूवमेंट (बिना दर्द)' : 'Full movement' },
+                      { id: 'partial', label: lang === 'hi' ? 'आंशिक मूवमेंट (दर्द के साथ हिल रहा है)' : 'Partial movement with pain' },
+                      { id: 'very_little', label: lang === 'hi' ? 'बहुत सीमित मूवमेंट (बहुत कम हिल रहा है)' : 'Very limited movement' },
+                      { id: 'cannot_move', label: lang === 'hi' ? 'बिल्कुल भी नहीं हिल रहा' : 'Cannot move at all' }
+                    ].map(opt => (
+                      <label key={opt.id} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
+                        <input 
+                          type="radio" 
+                          name="movementAbility" 
+                          checked={answers.movementAbility === opt.id}
+                          onChange={() => handleAnswerChange('movementAbility', opt.id)}
+                        />
+                        {opt.label}
+                      </label>
+                    ))}
+                  </div>
+                </div>
+
+                <div>
+                  <label style={{ display: 'block', fontWeight: 600, marginBottom: '0.5rem' }}>{lang === 'hi' ? "स्वस्थ जोड़ के साथ तुलना:" : "Comparison with uninjured side:"}</label>
+                  <select 
+                    className="glass-panel" 
+                    value={answers.sideComparison}
+                    onChange={(e) => handleAnswerChange('sideComparison', e.target.value)}
+                    style={{ width: '100%', padding: '0.5rem', color: 'inherit', background: 'var(--bg-dark)' }}
+                  >
+                    <option value="same">{lang === 'hi' ? 'बिल्कुल वैसा ही दिखता और महसूस होता है' : 'Looks and feels the same'}</option>
+                    <option value="slightly_different">{lang === 'hi' ? 'थोड़ा अलग (मामूली सूजन या लालिमा)' : 'Slightly different'}</option>
+                    <option value="clearly_different">{lang === 'hi' ? 'स्पष्ट रूप से अलग (स्पष्ट टेढ़ापन या भारी सूजन)' : 'Clearly different'}</option>
+                  </select>
+                </div>
+              </div>
+            )}
+
+            {/* STEP 7: RED FLAG SCREENING */}
+            {currentStep === 7 && (
+              <div className="fade-in" style={{ color: 'var(--color-emergency)' }}>
+                <h3 style={{ fontSize: '1.4rem', fontWeight: 700, marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  <AlertOctagon size={24} /> {t.redFlagsTitle}
+                </h3>
+                <p style={{ color: darkMode ? 'var(--text-dark-secondary)' : 'var(--text-light-secondary)', fontSize: '0.9rem', marginBottom: '1.5rem' }}>
+                  {t.redFlagsSub}
+                </p>
+
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', cursor: 'pointer', fontSize: '1.05rem', fontWeight: 600 }}>
+                    <input 
+                      type="checkbox" 
+                      checked={answers.boneProtruding}
+                      onChange={(e) => handleAnswerChange('boneProtruding', e.target.checked)}
+                    />
+                    {lang === 'hi' ? "क्या कोई हड्डी त्वचा से बाहर निकली हुई है?" : "Is a bone protruding/piercing through the skin?"}
+                  </label>
+
+                  <label style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', cursor: 'pointer', fontSize: '1.05rem', fontWeight: 600 }}>
+                    <input 
+                      type="checkbox" 
+                      checked={answers.numbnessBelow}
+                      onChange={(e) => handleAnswerChange('numbnessBelow', e.target.checked)}
+                    />
+                    {lang === 'hi' ? "क्या चोटिल स्थान के नीचे सुन्नता या झुनझुनी महसूस हो रही है?" : "Is there numbness, tingling, or pins and needles below?"}
+                  </label>
+
+                  <label style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', cursor: 'pointer', fontSize: '1.05rem', fontWeight: 600 }}>
+                    <input 
+                      type="checkbox" 
+                      checked={answers.blueColdBelow}
+                      onChange={(e) => handleAnswerChange('blueColdBelow', e.target.checked)}
+                    />
+                    {lang === 'hi' ? "क्या हाथ/पैर की उंगलियां नीली, पीली या ठंडी पड़ गई हैं?" : "Are the fingers/toes pale, blue, or cold to touch?"}
+                  </label>
+
+                  <label style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', cursor: 'pointer', fontSize: '1.05rem', fontWeight: 600 }}>
+                    <input 
+                      type="checkbox" 
+                      checked={answers.unrelivedPain}
+                      onChange={(e) => handleAnswerChange('unrelivedPain', e.target.checked)}
+                    />
+                    {lang === 'hi' ? "क्या असहनीय दर्द है जो आराम करने या दवा खाने से भी कम नहीं हो रहा?" : "Is there severe, constant pain not relieved by resting?"}
+                  </label>
+                </div>
+              </div>
+            )}
+
+            {/* STEP 8: MOCK AI IMAGE UPLOAD */}
+            {currentStep === 8 && (
+              <div className="fade-in">
+                <h3 style={{ fontSize: '1.4rem', fontWeight: 700, marginBottom: '0.5rem' }}>{t.aiUploadTitle}</h3>
+                <p style={{ fontSize: '0.85rem', color: darkMode ? 'var(--text-dark-secondary)' : 'var(--text-light-secondary)', marginBottom: '1.5rem' }}>
+                  {t.aiUploadSub}
+                </p>
+
+                {isAnalyzing ? (
+                  <div className="glass-panel" style={{ padding: '1.5rem', background: '#020617', fontFamily: 'monospace', fontSize: '0.85rem', border: '1px solid #1e293b' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--primary)', marginBottom: '1rem', fontWeight: 'bold' }}>
+                      <RefreshCw size={16} className="glow-primary" style={{ animation: 'spin 1s linear infinite' }} />
+                      <span>PYTORCH INFERENCE RUNNING...</span>
+                    </div>
+                    <style>{`
+                      @keyframes spin { 100% { transform: rotate(360deg); } }
+                    `}</style>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem', color: '#10b981', maxHeight: '180px', overflowY: 'auto' }}>
+                      {analysisLog.map((log, idx) => (
+                        <div key={idx}>{log}</div>
+                      ))}
+                    </div>
+                  </div>
+                ) : aiResult ? (
+                  <div className="glass-panel" style={{ padding: '1.5rem', border: '1px solid rgba(16, 185, 129, 0.3)', background: 'rgba(16, 185, 129, 0.05)' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#10b981', fontWeight: 600, marginBottom: '0.75rem' }}>
+                      <CheckCircle2 size={20} />
+                      <span>AI Model Inference Report</span>
+                    </div>
+                    <table style={{ width: '100%', fontSize: '0.9rem', borderCollapse: 'collapse' }}>
+                      <tbody>
+                        <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+                          <td style={{ padding: '0.5rem 0', color: 'var(--text-dark-secondary)' }}>Detected Swelling:</td>
+                          <td style={{ padding: '0.5rem 0', fontWeight: 600, textTransform: 'capitalize' }}>{aiResult.swellingPrediction} Swelling</td>
+                        </tr>
+                        <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+                          <td style={{ padding: '0.5rem 0', color: 'var(--text-dark-secondary)' }}>Detected Bruising:</td>
+                          <td style={{ padding: '0.5rem 0', fontWeight: 600, textTransform: 'capitalize' }}>{aiResult.bruisingPrediction} Bruise</td>
+                        </tr>
+                        <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+                          <td style={{ padding: '0.5rem 0', color: 'var(--text-dark-secondary)' }}>Model Confidence:</td>
+                          <td style={{ padding: '0.5rem 0', fontWeight: 600, color: 'var(--primary)' }}>94.5%</td>
+                        </tr>
+                        <tr>
+                          <td style={{ padding: '0.5rem 0', color: 'var(--text-dark-secondary)' }}>Deformity Guard:</td>
+                          <td style={{ padding: '0.5rem 0', fontSize: '0.85rem' }}>{aiResult.alignmentCheck}</td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+                ) : (
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem' }}>
+                    <div className="glass-panel" style={{ padding: '1.5rem', textAlign: 'center', border: '2px dashed var(--border-dark)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+                      {injuryPhotoUrl ? (
+                        <img src={injuryPhotoUrl} alt="Injury preview" style={{ maxWidth: '100%', maxHeight: '120px', borderRadius: '8px', marginBottom: '0.5rem' }} />
+                      ) : (
+                        <UploadCloud size={40} style={{ color: 'var(--text-dark-secondary)', marginBottom: '0.5rem' }} />
+                      )}
+                      <label className="btn btn-secondary" style={{ padding: '0.4rem 0.8rem', fontSize: '0.8rem', cursor: 'pointer' }}>
+                        {lang === 'hi' ? "चोट की फोटो चुनें" : "Choose Injury Photo"}
+                        <input type="file" accept="image/*" style={{ display: 'none' }} onChange={(e) => handlePhotoUpload(e, 'injury')} />
+                      </label>
+                    </div>
+
+                    <div className="glass-panel" style={{ padding: '1.5rem', textAlign: 'center', border: '2px dashed var(--border-dark)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+                      {comparisonPhotoUrl ? (
+                        <img src={comparisonPhotoUrl} alt="Comparison preview" style={{ maxWidth: '100%', maxHeight: '120px', borderRadius: '8px', marginBottom: '0.5rem' }} />
+                      ) : (
+                        <UploadCloud size={40} style={{ color: 'var(--text-dark-secondary)', marginBottom: '0.5rem' }} />
+                      )}
+                      <label className="btn btn-secondary" style={{ padding: '0.4rem 0.8rem', fontSize: '0.8rem', cursor: 'pointer' }}>
+                        {lang === 'hi' ? "स्वस्थ पक्ष चुनें" : "Choose Other Side"}
+                        <input type="file" accept="image/*" style={{ display: 'none' }} onChange={(e) => handlePhotoUpload(e, 'comparison')} />
+                      </label>
+                    </div>
+                  </div>
+                )}
+
+                {injuryPhoto && !aiResult && !isAnalyzing && (
+                  <button 
+                    className="btn btn-primary glow-primary" 
+                    style={{ width: '100%', marginTop: '1.5rem', justifyContent: 'center' }}
+                    onClick={runAiAnalysis}
+                  >
+                    {t.analyzeButton}
+                  </button>
+                )}
+              </div>
+            )}
+
+            {/* Bottom Wizard Controls */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '2.5rem' }}>
+              <button 
+                type="button"
+                className="btn btn-secondary"
+                disabled={currentStep === 0}
+                style={{ opacity: currentStep === 0 ? 0.3 : 1 }}
+                onClick={() => setCurrentStep(prev => prev - 1)}
+              >
+                <ChevronLeft size={16} /> {t.back}
+              </button>
+              
+              {currentStep < steps.length - 1 ? (
+                <button 
+                  type="button"
+                  className="btn btn-primary"
+                  disabled={currentStep === 0 && !injuryArea}
+                  style={{ opacity: (currentStep === 0 && !injuryArea) ? 0.3 : 1 }}
+                  onClick={() => setCurrentStep(prev => prev + 1)}
+                >
+                  {t.next} <ChevronRight size={16} />
+                </button>
+              ) : (
+                <button 
+                  type="button"
+                  className="btn btn-primary glow-primary"
+                  style={{ background: 'var(--color-low)' }}
+                  onClick={handleFinishAssessment}
+                >
+                  {t.generateReport} <Check size={16} />
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* --- SCREEN 5: RESULTS & DETAILS VIEW --- */}
+      {view === 'details' && selectedHistoryItem && (
+        <div className="slide-in fade-in" style={{ maxWidth: '900px', margin: '0 auto' }}>
+          
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
+            <button className="btn btn-secondary" onClick={() => setView(history.includes(selectedHistoryItem) ? 'history' : 'dashboard')}>
+              <ChevronLeft size={16} /> {t.backToRecords}
+            </button>
+            <div style={{ display: 'flex', gap: '0.5rem' }}>
+              {activeTrackingId === selectedHistoryItem.assessmentId ? (
+                <button 
+                  className="btn btn-primary" 
+                  style={{ background: 'var(--color-low)' }}
+                  onClick={() => setView('recovery')}
+                >
+                  {lang === 'hi' ? "ट्रैकिंग प्रगति देखें" : (lang === 'hn' ? "Tracking Progress Dekhein" : "View Tracking Progress")}
+                </button>
+              ) : (
+                <button 
+                  className="btn btn-primary glow-primary"
+                  onClick={() => {
+                    setActiveTrackingId(selectedHistoryItem.assessmentId);
+                    localStorage.setItem(`injuryiq_active_tracking_${currentUser.email}`, selectedHistoryItem.assessmentId);
+                    const logsKey = `injuryiq_recovery_logs_${currentUser.email}_${selectedHistoryItem.assessmentId}`;
+                    if (!localStorage.getItem(logsKey)) {
+                      const initialLog = {
+                        id: `log_init_${selectedHistoryItem.assessmentId}`,
+                        painLevel: selectedHistoryItem.symptoms?.painLevel ?? 5,
+                        swelling: selectedHistoryItem.symptoms?.swelling ?? 'none',
+                        mobility: selectedHistoryItem.symptoms?.movementAbility === 'normal' ? 'normal' : (selectedHistoryItem.symptoms?.movementAbility === 'partial' ? 'partial' : 'limited'),
+                        notes: 'Initial Assessment Day',
+                        date: selectedHistoryItem.createdAt.split('T')[0]
+                      };
+                      localStorage.setItem(logsKey, JSON.stringify([initialLog]));
+                      setRecoveryLogs([initialLog]);
+                    }
+                    setView('recovery');
+                    alert(lang === 'hi' ? "रिकवरी ट्रैकिंग शुरू हो गई है!" : (lang === 'hn' ? "Recovery tracking start ho gayi hai!" : "Recovery tracking started!"));
+                  }}
+                >
+                  {lang === 'hi' ? "रिकवरी ट्रैक करें" : (lang === 'hn' ? "Recovery Track Karein" : "Track Recovery")}
+                </button>
+              )}
+              <button 
+                className="btn btn-secondary hide-on-print" 
+                onClick={() => window.print()}
+                style={{ background: 'rgba(59, 130, 246, 0.1)', border: '1px solid var(--primary)', color: 'var(--primary)' }}
+              >
+                <FileText size={16} /> {lang === 'hi' ? "रिपोर्ट प्रिंट / PDF" : (lang === 'hn' ? "Report Print / PDF" : "Print / Export PDF")}
+              </button>
+              <button className="btn btn-secondary hide-on-print" style={{ color: 'var(--color-emergency)' }} onClick={() => {
+                handleDeleteHistory(selectedHistoryItem.assessmentId);
+                setView('history');
+              }}>
+                <Trash2 size={16} /> {t.deleteRecord}
+              </button>
+            </div>
+          </div>
+
+          <div className="dashboard-grid">
+            <div>
+              <div 
+                className="glass-panel" 
+                style={{ 
+                  padding: '2rem', 
+                  marginBottom: '2rem', 
+                  borderTop: `6px solid var(--color-${selectedHistoryItem.riskLevel.toLowerCase()})`,
+                  textAlign: 'center'
+                }}
+              >
+                <span className={`badge badge-${selectedHistoryItem.riskLevel.toLowerCase()}`} style={{ fontSize: '1rem', padding: '0.4rem 1rem' }}>
+                  {selectedHistoryItem.riskLevel}
+                </span>
+                
+                <div style={{ fontSize: '4.5rem', fontWeight: 800, margin: '1rem 0 0.25rem 0', fontFamily: 'monospace', lineHeight: 1 }}>
+                  {selectedHistoryItem.riskScore}
+                </div>
+                <div style={{ color: 'var(--text-dark-secondary)', fontSize: '0.9rem', marginBottom: '1.5rem' }}>
+                  {t.triageScore}
+                </div>
+
+                <h3 style={{ fontSize: '1.4rem', fontWeight: 700, margin: '1rem 0' }}>
+                  {selectedHistoryItem.recommendations.title}
+                </h3>
+              </div>
+
+              {/* Explainable Breakdown */}
+              <div className="glass-panel" style={{ padding: '1.5rem', marginBottom: '2rem' }}>
+                <h3 style={{ fontSize: '1.2rem', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  <FileText size={18} /> {t.explainableBreakdown}
+                </h3>
+                <p style={{ fontSize: '0.8rem', color: darkMode ? 'var(--text-dark-secondary)' : 'var(--text-light-secondary)', marginTop: '-0.5rem', marginBottom: '1rem' }}>
+                  {t.breakdownSub}
+                </p>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                  {selectedHistoryItem.scoreBreakdown.map((item, idx) => (
+                    <div 
+                      key={idx} 
+                      style={{ 
+                        display: 'flex', 
+                        justifyContent: 'space-between', 
+                        padding: '0.5rem 0', 
+                        borderBottom: '1px solid rgba(255,255,255,0.05)',
+                        fontSize: '0.9rem' 
+                      }}
+                    >
+                      <span style={{ color: 'var(--text-dark-secondary)' }}>{item.factor}</span>
+                      <span style={{ fontWeight: 700, color: 'var(--color-high)' }}>+{item.points}</span>
+                    </div>
+                  ))}
+                  <div style={{ display: 'flex', justifyContent: 'space-between', padding: '0.75rem 0 0 0', fontWeight: 'bold', fontSize: '1.1rem' }}>
+                    <span>{t.finalScore}</span>
+                    <span>{selectedHistoryItem.riskScore}</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Actionable Recs */}
+              <div className="glass-panel" style={{ padding: '1.5rem' }}>
+                <h3 style={{ fontSize: '1.2rem', marginBottom: '1.2rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  <Shield size={18} /> {t.actionableRecs}
+                </h3>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                  {selectedHistoryItem.recommendations.actions.map((act, idx) => (
+                    <div key={idx} style={{ display: 'flex', gap: '0.75rem', fontSize: '0.95rem' }}>
+                      <div style={{ color: 'var(--primary)', marginTop: '0.15rem' }}>
+                        <CheckCircle2 size={16} />
+                      </div>
+                      <div>{act}</div>
+                    </div>
+                  ))}
+                </div>
+
+                {["LOW", "MODERATE"].includes(selectedHistoryItem.riskLevel) && (
+                  <div style={{ borderTop: '1px solid rgba(255,255,255,0.08)', marginTop: '1.5rem', paddingTop: '1.5rem' }}>
+                    <div style={{ fontWeight: 600, marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                      <Info size={16} /> {lang === 'hi' ? "प्राथमिक चिकित्सा: R.I.C.E. निर्देश" : "Standard R.I.C.E. Guide"}
+                    </div>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '0.5rem', fontSize: '0.8rem', textAlign: 'center' }}>
+                      <div className="glass-panel" style={{ padding: '0.5rem', background: 'rgba(255,255,255,0.01)' }}>
+                        <div style={{ fontWeight: 'bold', color: 'var(--primary)' }}>REST</div>
+                        <div>{lang === 'hi' ? 'आराम दें' : 'Avoid load'}</div>
+                      </div>
+                      <div className="glass-panel" style={{ padding: '0.5rem', background: 'rgba(255,255,255,0.01)' }}>
+                        <div style={{ fontWeight: 'bold', color: 'var(--primary)' }}>ICE</div>
+                        <div>{lang === 'hi' ? 'बर्फ सेक' : '15-20m limit'}</div>
+                      </div>
+                      <div className="glass-panel" style={{ padding: '0.5rem', background: 'rgba(255,255,255,0.01)' }}>
+                        <div style={{ fontWeight: 'bold', color: 'var(--primary)' }}>COMPRESS</div>
+                        <div>{lang === 'hi' ? 'पट्टी बांधें' : 'Snug wrap'}</div>
+                      </div>
+                      <div className="glass-panel" style={{ padding: '0.5rem', background: 'rgba(255,255,255,0.01)' }}>
+                        <div style={{ fontWeight: 'bold', color: 'var(--primary)' }}>ELEVATE</div>
+                        <div>{lang === 'hi' ? 'ऊंचा उठाएं' : 'Lift joint'}</div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Right Panel: Metadata & X-ray Banner */}
+            <div>
+              <div className="glass-panel" style={{ padding: '1.5rem', marginBottom: '1.5rem' }}>
+                <h4 style={{ margin: '0 0 1rem 0', borderBottom: '1px solid rgba(255,255,255,0.05)', paddingBottom: '0.5rem' }}>{t.metadataTitle}</h4>
+                <table style={{ width: '100%', fontSize: '0.85rem', borderCollapse: 'collapse' }}>
+                  <tbody>
+                    <tr style={{ height: '35px' }}>
+                      <td style={{ color: 'var(--text-dark-secondary)' }}>{t.injuryLocation}:</td>
+                      <td style={{ fontWeight: 600, textTransform: 'capitalize', textAlign: 'right' }}>
+                        {lang === 'hi' ? (selectedHistoryItem.injuryArea === 'ankle' ? 'टखना' : selectedHistoryItem.injuryArea === 'knee' ? 'घुटना' : selectedHistoryItem.injuryArea === 'foot' ? 'पैर' : 'कलाई') : selectedHistoryItem.injuryArea}
+                      </td>
+                    </tr>
+                    <tr style={{ height: '35px', borderTop: '1px solid rgba(255,255,255,0.05)' }}>
+                      <td style={{ color: 'var(--text-dark-secondary)' }}>{t.injuryTimeline}:</td>
+                      <td style={{ fontWeight: 600, textAlign: 'right' }}>{selectedHistoryItem.injuryTimeAgo}</td>
+                    </tr>
+                    <tr style={{ height: '35px', borderTop: '1px solid rgba(255,255,255,0.05)' }}>
+                      <td style={{ color: 'var(--text-dark-secondary)' }}>{t.timestamp}:</td>
+                      <td style={{ fontWeight: 600, textAlign: 'right' }}>{new Date(selectedHistoryItem.createdAt).toLocaleString()}</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+
+              {/* Ottawa rule conclusion card */}
+              {['ankle', 'foot', 'knee'].includes(selectedHistoryItem.injuryArea) && (
+                <div 
+                  className="glass-panel" 
+                  style={{ 
+                    padding: '1.5rem', 
+                    background: (selectedHistoryItem.riskScore >= 50) ? 'var(--color-high-bg)' : 'rgba(255,255,255,0.01)',
+                    border: (selectedHistoryItem.riskScore >= 50) ? '1px solid rgba(249, 115, 22, 0.3)' : '1px solid var(--border-dark)'
+                  }}
+                >
+                  <h4 style={{ margin: '0 0 0.5rem 0', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+                    <Info size={16} /> {t.ottawaScreening}
+                  </h4>
+                  <p style={{ fontSize: '0.85rem', margin: 0 }}>
+                    {selectedHistoryItem.riskScore >= 50 ? (
+                      <>
+                        <strong>POSITIVE:</strong> {lang === 'hi' ? "वजन सहन करने में असमर्थता या हड्डी में दर्द पाया गया। फ्रैक्चर की जांच के लिए नैदानिक एक्स-रे की दृढ़ता से सिफारिश की जाती है।" : "Inability to bear weight or local bone point tenderness detected. Triage guidelines state that a clinical X-ray evaluation is indicated to rule out fracture."}
+                      </>
+                    ) : (
+                      <>
+                        <strong>NEGATIVE:</strong> {lang === 'hi' ? "परीक्षण क्षेत्रों में कोई हड्डी का दर्द नहीं है और वजन सहन करने की क्षमता सामान्य है। फ्रैक्चर होने की संभावना काफी कम है।" : "No specific bone tenderness at Ottawa test zones and weight-bearing intact. Fracture probability is statistically low."}
+                      </>
+                    )}
+                  </p>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* --- SCREEN 6: GENERAL HISTORY LIST --- */}
+      {view === 'history' && (
+        <div className="slide-in fade-in" style={{ maxWidth: '800px', margin: '0 auto' }}>
+          <h2 style={{ fontSize: '1.6rem', fontWeight: 700, marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <HistoryIcon size={24} /> {lang === 'hi' ? 'चोट मूल्यांकन इतिहास' : 'Assessment History Log'}
+          </h2>
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+            {history.map((item, idx) => (
+              <div 
+                key={idx} 
+                className="glass-panel glass-panel-hover" 
+                style={{ padding: '1.5rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '1.5rem' }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                  <div style={{ background: 'rgba(59,130,246,0.1)', color: 'var(--primary)', padding: '0.75rem', borderRadius: '50%' }}>
+                    <Activity size={20} />
+                  </div>
+                  <div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                      <span style={{ fontWeight: 700, textTransform: 'capitalize', fontSize: '1.1rem' }}>
+                        {lang === 'hi' ? (item.injuryArea === 'ankle' ? 'टखना' : item.injuryArea === 'knee' ? 'घुटना' : item.injuryArea === 'foot' ? 'पैर' : 'कलाई') : item.injuryArea} Injury
+                      </span>
+                      <span className={`badge badge-${item.riskLevel.toLowerCase()}`}>
+                        {item.riskLevel}
+                      </span>
+                    </div>
+                    <div style={{ display: 'flex', gap: '1.5rem', fontSize: '0.85rem', color: darkMode ? 'var(--text-dark-secondary)' : 'var(--text-light-secondary)', marginTop: '0.25rem' }}>
+                      <span style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+                        <Clock size={12} /> {item.injuryTimeAgo}
+                      </span>
+                      <span style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+                        <Calendar size={12} /> {new Date(item.createdAt).toLocaleDateString()}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                  <div style={{ textAlign: 'right', marginRight: '1rem' }}>
+                    <div style={{ fontSize: '1.3rem', fontWeight: 800, fontFamily: 'monospace' }}>{item.riskScore}</div>
+                    <div style={{ fontSize: '0.7rem', color: 'var(--text-dark-secondary)' }}>score</div>
+                  </div>
+                  <button 
+                    className="btn btn-secondary" 
+                    style={{ padding: '0.5rem' }}
+                    onClick={() => {
+                      setSelectedHistoryItem(item);
+                      setView('details');
+                    }}
+                  >
+                    <Eye size={16} />
+                  </button>
+                  <button 
+                    className="btn btn-secondary" 
+                    style={{ padding: '0.5rem', color: 'var(--color-emergency)' }}
+                    onClick={() => handleDeleteHistory(item.assessmentId)}
+                  >
+                    <Trash2 size={16} />
+                  </button>
+                </div>
+              </div>
+            ))}
+
+            {history.length === 0 && (
+              <div className="glass-panel" style={{ padding: '3rem', textAlign: 'center' }}>
+                <p style={{ color: 'var(--text-dark-secondary)' }}>No injury assessment records found in LocalStorage cache.</p>
+                <button className="btn btn-primary" style={{ marginTop: '1rem' }} onClick={handleStartNewAssessment}>
+                  Start Your First Assessment
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* --- SCREEN 7: RECOVERY TRACKING DASHBOARD --- */}
+      {view === 'recovery' && (() => {
+        const REHAB_EXERCISES = {
+          ankle: [
+            {
+              id: "ankle_pump",
+              name: lang === 'hi' ? "टखने के पंप" : (lang === 'hn' ? "Ankle Pumps (Up-Down Movement)" : "Ankle Pumps"),
+              description: lang === 'hi' ? "अपने पैर को धीरे-धीरे ऊपर और नीचे खींचें। सूजन कम करने के लिए यह सबसे अच्छा है।" : (lang === 'hn' ? "Apne pair ko dhire-dhire upar aur niche stretch karein. Sujan kam karne ke liye yeh best hai." : "Bend your ankle up towards your head, then point it down away from you. Helps reduce swelling."),
+              duration: 30,
+              sets: "3 sets of 15 reps",
+              svg: (
+                <svg viewBox="0 0 100 60" style={{ width: '80px', height: '50px' }}>
+                  <path d="M10 20 L60 25 L85 45" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" />
+                  <path d="M82 30 Q92 38 82 46" fill="none" stroke="var(--primary)" strokeWidth="2" strokeLinecap="round" />
+                  <text x="10" y="55" fill="var(--text-dark-secondary)" fontSize="8" fontWeight="bold">Day 1-3</text>
+                </svg>
+              )
+            },
+            {
+              id: "ankle_circle",
+              name: lang === 'hi' ? "टखने के चक्कर" : (lang === 'hn' ? "Ankle Circles (Gol Ghoomana)" : "Ankle Circles"),
+              description: lang === 'hi' ? "पैर के पंजे को गोल घुमाएं ताकि जोड़ अधिक लचीला हो सके।" : (lang === 'hn' ? "Pair ke panje ko gol clockwise aur counter-clockwise ghoomayein mobility ke liye." : "Rotate your ankle slowly in a circle, clockwise then counter-clockwise. Improves joint mobility."),
+              duration: 45,
+              sets: "3 sets of 10 circles each side",
+              svg: (
+                <svg viewBox="0 0 100 60" style={{ width: '80px', height: '50px' }}>
+                  <path d="M10 20 L60 25 L85 45" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" />
+                  <circle cx="85" cy="42" r="8" fill="none" stroke="var(--primary)" strokeWidth="1.5" strokeDasharray="18 4" />
+                  <text x="10" y="55" fill="var(--text-dark-secondary)" fontSize="8" fontWeight="bold">Day 3-5</text>
+                </svg>
+              )
+            },
+            {
+              id: "towel_stretch",
+              name: lang === 'hi' ? "तौलिया खिंचाव" : (lang === 'hn' ? "Towel Calf Stretch" : "Towel Calf Stretch"),
+              description: lang === 'hi' ? "पैरों को सीधा रखकर बैठें, पैर में तौलिया लपेटें और उसे अपनी ओर खींचें।" : (lang === 'hn' ? "Lete ya baithte hue foot par towel lapetein aur dhire se pull karein. Hold karein." : "Sit with leg straight. Loop a towel around your foot and pull gently towards you. Hold the stretch."),
+              duration: 30,
+              sets: "Hold 30s, repeat 3 times",
+              svg: (
+                <svg viewBox="0 0 100 60" style={{ width: '80px', height: '50px' }}>
+                  <path d="M10 40 L70 40 L80 15" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" />
+                  <path d="M80 15 Q40 15 20 20" fill="none" stroke="var(--primary)" strokeWidth="2" strokeDasharray="3 2" />
+                  <text x="10" y="55" fill="var(--text-dark-secondary)" fontSize="8" fontWeight="bold">Day 5+</text>
+                </svg>
+              )
+            },
+            {
+              id: "isometric_press",
+              name: lang === 'hi' ? "आइसोमेट्रिक प्रेस" : (lang === 'hn' ? "Isometric Press (Deewar pe Dabayein)" : "Isometric Press"),
+              description: lang === 'hi' ? "बिना पैर हिलाए, बाहरी पंजे को दीवार पर दबाएं। मांसपेशियां मजबूत होती हैं।" : (lang === 'hn' ? "Apne foot ko deewar ke side me press karein bina pair hilaaye (muscle strengthening)." : "Push the outside of your foot against a wall or heavy table without moving the joint. Strengthens muscles."),
+              duration: 15,
+              sets: "Hold 10s, repeat 10 times",
+              svg: (
+                <svg viewBox="0 0 100 60" style={{ width: '80px', height: '50px' }}>
+                  <path d="M15 45 L70 45 L75 20" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" />
+                  <line x1="85" y1="10" x2="85" y2="50" stroke="var(--color-emergency)" strokeWidth="3" />
+                  <text x="10" y="55" fill="var(--text-dark-secondary)" fontSize="8" fontWeight="bold">Day 7+</text>
+                </svg>
+              )
+            }
+          ],
+          knee: [
+            {
+              id: "quad_set",
+              name: lang === 'hi' ? "क्वाड सेट्स" : (lang === 'hn' ? "Quad Sets (Thigh Tighten)" : "Quad Sets"),
+              description: lang === 'hi' ? "पैर को सीधा रखें और जांघ की मांसपेशियों को कसें, घुटने को फर्श पर दबाएं।" : (lang === 'hn' ? "Leg ko seedha rakhein aur thigh muscles ko tight karein, ghutne ko niche floor pe dabayein." : "Lie on your back, tighten your thigh muscle, and push the back of your knee down. Hold for 5 seconds."),
+              duration: 10,
+              sets: "Hold 5s, repeat 15 times",
+              svg: (
+                <svg viewBox="0 0 100 60" style={{ width: '80px', height: '50px' }}>
+                  <path d="M10 40 Q40 40 60 40 T90 40" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" />
+                  <path d="M50 40 L50 48" fill="none" stroke="var(--primary)" strokeWidth="2" />
+                  <text x="10" y="55" fill="var(--text-dark-secondary)" fontSize="8" fontWeight="bold">Day 1-3</text>
+                </svg>
+              )
+            },
+            {
+              id: "heel_slide",
+              name: lang === 'hi' ? "एड़ी फिसलना" : (lang === 'hn' ? "Heel Slides (Ghutna Modein)" : "Heel Slides"),
+              description: lang === 'hi' ? "एड़ी को फर्श पर खिसकाते हुए अपने घुटने को मोड़ें, फिर सीधा करें।" : (lang === 'hn' ? "Apni heel ko floor par slide karte hue apne hips ke paas laayein aur fir seedha karein." : "Slide your heel along the floor towards your buttocks, bending your knee. Then slide back."),
+              duration: 30,
+              sets: "3 sets of 10 reps",
+              svg: (
+                <svg viewBox="0 0 100 60" style={{ width: '80px', height: '50px' }}>
+                  <path d="M10 40 L50 25 L75 40" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" />
+                  <path d="M75 40 L50 40" fill="none" stroke="var(--primary)" strokeWidth="1.5" strokeDasharray="3 3" />
+                  <text x="10" y="55" fill="var(--text-dark-secondary)" fontSize="8" fontWeight="bold">Day 3-5</text>
+                </svg>
+              )
+            },
+            {
+              id: "leg_raise",
+              name: lang === 'hi' ? "सीधे पैर उठाना" : (lang === 'hn' ? "Straight Leg Raises" : "Straight Leg Raises"),
+              description: lang === 'hi' ? "जांघ को कस कर रखें, पैर सीधा करें और फर्श से 6-12 इंच ऊपर उठाएं।" : (lang === 'hn' ? "Leg ko bilkul seedha karke floor se 6-12 inches upar uthayein aur hold karein." : "Tighten thigh, keep leg fully straight, and raise it 6-12 inches off the floor. Lower slowly."),
+              duration: 20,
+              sets: "3 sets of 10 reps",
+              svg: (
+                <svg viewBox="0 0 100 60" style={{ width: '80px', height: '50px' }}>
+                  <path d="M10 40 L50 30 L80 20" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" />
+                  <text x="10" y="55" fill="var(--text-dark-secondary)" fontSize="8" fontWeight="bold">Day 3-5</text>
+                </svg>
+              )
+            },
+            {
+              id: "wall_squats",
+              name: lang === 'hi' ? "दीवार बैठना" : (lang === 'hn' ? "Wall Squats (Deewar ke Sahare)" : "Wall Squats"),
+              description: lang === 'hi' ? "दीवार के सहारे पीठ टिकाएं, घुटनों को थोड़ा मोड़ें और फिर वापस ऊपर उठें।" : (lang === 'hn' ? "Deewar par back tikayein aur dhire se niche slide karein (minor bend). Phir upar aayein." : "Lean back against a wall. Slide down to bend knees slightly (no more than 45 deg). Push back up."),
+              duration: 30,
+              sets: "3 sets of 8-10 squats",
+              svg: (
+                <svg viewBox="0 0 100 60" style={{ width: '80px', height: '50px' }}>
+                  <path d="M40 10 L40 30 L60 30" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" />
+                  <line x1="30" y1="10" x2="30" y2="50" stroke="var(--primary)" strokeWidth="3" />
+                  <text x="10" y="55" fill="var(--text-dark-secondary)" fontSize="8" fontWeight="bold">Day 7+</text>
+                </svg>
+              )
+            }
+          ],
+          wrist: [
+            {
+              id: "wrist_pump",
+              name: lang === 'hi' ? "मुट्ठी पंप" : (lang === 'hn' ? "Fist Pumps (Mutthi Band-Kholna)" : "Fist Pumps"),
+              description: lang === 'hi' ? "हल्के से ढीली मुट्ठी बनाएं, फिर उंगलियों को फैलाकर खोलें। रक्त प्रवाह बढ़ाता है।" : (lang === 'hn' ? "Gently fist band karein, phir fingers ko poora bahar kholein. Blood circulation badhata hai." : "Gently make a loose fist, then stretch your fingers wide open. Helps restore blood flow."),
+              duration: 20,
+              sets: "2 sets of 15 reps",
+              svg: (
+                <svg viewBox="0 0 100 60" style={{ width: '80px', height: '50px' }}>
+                  <circle cx="50" cy="30" r="10" fill="none" stroke="currentColor" strokeWidth="3" />
+                  <path d="M50 15 L50 5" fill="none" stroke="var(--primary)" strokeWidth="1.5" />
+                  <text x="10" y="55" fill="var(--text-dark-secondary)" fontSize="8" fontWeight="bold">Day 1-3</text>
+                </svg>
+              )
+            },
+            {
+              id: "wrist_flexion",
+              name: lang === 'hi' ? "कलाई मोड़ना" : (lang === 'hn' ? "Wrist Flexion/Extension" : "Wrist Flex/Extend"),
+              description: lang === 'hi' ? "कलाई को धीरे से अपने चेहरे की ओर मोड़ें, फिर फर्श की ओर झुकाएं।" : (lang === 'hn' ? "Apne hath ko wrist se upar aur niche dhire se bend karein mobility ke liye." : "Gently bend your wrist up towards your face, then down towards the floor. Improves mobility."),
+              duration: 30,
+              sets: "3 sets of 10 reps",
+              svg: (
+                <svg viewBox="0 0 100 60" style={{ width: '80px', height: '50px' }}>
+                  <path d="M10 30 L55 30 L75 15" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" />
+                  <path d="M72 17 Q80 25 72 32" fill="none" stroke="var(--primary)" strokeWidth="2" />
+                  <text x="10" y="55" fill="var(--text-dark-secondary)" fontSize="8" fontWeight="bold">Day 3-5</text>
+                </svg>
+              )
+            },
+            {
+              id: "wrist_rotation",
+              name: lang === 'hi' ? "कलाई का चक्कर" : (lang === 'hn' ? "Wrist Rotations (Gol Ghoomana)" : "Wrist Rotations"),
+              description: lang === 'hi' ? "कलाई को धीरे-धीरे गोलाकार गति में घुमाएं ताकि जोड़ सुचारू हो सके।" : (lang === 'hn' ? "Dhire se haath ko clockwise aur anticlockwise circles me ghoomayein." : "Rotate your hand slowly in circular motions to lubricate the joint and restore range of motion."),
+              duration: 30,
+              sets: "3 sets of 10 rotations",
+              svg: (
+                <svg viewBox="0 0 100 60" style={{ width: '80px', height: '50px' }}>
+                  <path d="M10 30 L55 30 L75 30" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" />
+                  <circle cx="75" cy="30" r="8" fill="none" stroke="var(--primary)" strokeWidth="1.5" strokeDasharray="18 4" />
+                  <text x="10" y="55" fill="var(--text-dark-secondary)" fontSize="8" fontWeight="bold">Day 3-5</text>
+                </svg>
+              )
+            },
+            {
+              id: "ball_squeeze",
+              name: lang === 'hi' ? "गेंद दबाना" : (lang === 'hn' ? "Stress Ball Squeeze" : "Stress Ball Squeeze"),
+              description: lang === 'hi' ? "हाथ में एक नरम गेंद पकड़ें और उसे कसकर दबाएं, 5 सेकंड के लिए रोकें।" : (lang === 'hn' ? "Kisi soft sponge ball ko mutthi me squeeze karein aur 5 seconds tak hold karein." : "Hold a soft foam ball or sponge in your hand and squeeze it firmly. Hold for 5 seconds."),
+              duration: 15,
+              sets: "Repeat 10-15 times daily",
+              svg: (
+                <svg viewBox="0 0 100 60" style={{ width: '80px', height: '50px' }}>
+                  <circle cx="65" cy="30" r="12" fill="rgba(59, 130, 246, 0.4)" stroke="var(--primary)" strokeWidth="2" />
+                  <circle cx="65" cy="30" r="8" fill="none" stroke="currentColor" strokeWidth="2" />
+                  <text x="10" y="55" fill="var(--text-dark-secondary)" fontSize="8" fontWeight="bold">Day 7+</text>
+                </svg>
+              )
+            }
+          ],
+          foot: [
+            {
+              id: "toe_curl",
+              name: lang === 'hi' ? "पैर की अंगुली कर्ल" : (lang === 'hn' ? "Toe Curls (Towel kheechhna)" : "Toe Towel Curls"),
+              description: lang === 'hi' ? "फर्श पर तौलिया रखें और अपनी उंगलियों का उपयोग करके उसे अपनी ओर खींचें।" : (lang === 'hn' ? "Floor par towel bichhayein aur toes se use apni taraf pull karne ki koshish karein." : "Place a small towel on the floor. Use your toes to scrunch and pull the towel toward you."),
+              duration: 30,
+              sets: "Repeat 3 times for 1 minute each",
+              svg: (
+                <svg viewBox="0 0 100 60" style={{ width: '80px', height: '50px' }}>
+                  <path d="M10 40 L60 40 L85 45" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" />
+                  <path d="M50 42 Q30 42 10 45" fill="none" stroke="var(--primary)" strokeWidth="2" />
+                  <text x="10" y="55" fill="var(--text-dark-secondary)" fontSize="8" fontWeight="bold">Day 1-3</text>
+                </svg>
+              )
+            },
+            {
+              id: "toe_splay",
+              name: lang === 'hi' ? "पैर की उंगलियों को फैलाना" : (lang === 'hn' ? "Toe Splay (Ungliyan phailana)" : "Toe Splay"),
+              description: lang === 'hi' ? "अपनी उंगलियों को फैलाएं, 5 सेकंड के लिए रोकें, फिर ढीला छोड़ें।" : (lang === 'hn' ? "Apne toes ko jitna ho sake wide spread karein, 5s hold karein, fir relax karein." : "Spread all of your toes apart as far as comfortable. Hold for 5 seconds, then relax."),
+              duration: 15,
+              sets: "10 repetitions daily",
+              svg: (
+                <svg viewBox="0 0 100 60" style={{ width: '80px', height: '50px' }}>
+                  <circle cx="50" cy="30" r="10" fill="none" stroke="currentColor" strokeWidth="2" />
+                  <line x1="50" y1="20" x2="50" y2="10" stroke="var(--primary)" strokeWidth="1.5" />
+                  <line x1="42" y1="22" x2="35" y2="15" stroke="var(--primary)" strokeWidth="1.5" />
+                  <line x1="58" y1="22" x2="65" y2="15" stroke="var(--primary)" strokeWidth="1.5" />
+                  <text x="10" y="55" fill="var(--text-dark-secondary)" fontSize="8" fontWeight="bold">Day 1-3</text>
+                </svg>
+              )
+            },
+            {
+              id: "fascia_stretch",
+              name: lang === 'hi' ? "प्लांटार फासिआ खिंचाव" : (lang === 'hn' ? "Plantar Fascia Stretch" : "Plantar Fascia Stretch"),
+              description: lang === 'hi' ? "बैठकर पैर को ऊपर लाएं, और अपने हाथ से उंगलियों को पीछे की ओर खींचें।" : (lang === 'hn' ? "Apne toes ko haath se pakad kar peechhe ki taraf stretch karein (foot heel pain ke liye)." : "Sit down, cross your foot over, and pull your toes back towards your shin using your hand."),
+              duration: 30,
+              sets: "Hold 30s, repeat 3 times",
+              svg: (
+                <svg viewBox="0 0 100 60" style={{ width: '80px', height: '50px' }}>
+                  <path d="M10 40 L60 40 L80 15" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" />
+                  <path d="M80 15 L70 5" fill="none" stroke="var(--primary)" strokeWidth="2" />
+                  <text x="10" y="55" fill="var(--text-dark-secondary)" fontSize="8" fontWeight="bold">Day 3-5</text>
+                </svg>
+              )
+            },
+            {
+              id: "calf_stretch",
+              name: lang === 'hi' ? "पिंडली का खिंचाव" : (lang === 'hn' ? "Calf/Achilles Stretch" : "Calf / Achilles Stretch"),
+              description: lang === 'hi' ? "दीवार के सहारे एक पैर पीछे फैलाकर खड़े हों और एड़ी को फर्श पर सपाट रखें।" : (lang === 'hn' ? "Wall ki taraf face karke khade hon, ek leg peeche stretch karein heel ko floor par rakhte hue." : "Lean against a wall with one leg back, heel flat on the floor. Feel the stretch in your calf."),
+              duration: 30,
+              sets: "3 sets of 30s holds",
+              svg: (
+                <svg viewBox="0 0 100 60" style={{ width: '80px', height: '50px' }}>
+                  <path d="M30 45 L50 20 L70 45" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" />
+                  <line x1="80" y1="10" x2="80" y2="50" stroke="var(--primary)" strokeWidth="3" />
+                  <text x="10" y="55" fill="var(--text-dark-secondary)" fontSize="8" fontWeight="bold">Day 5+</text>
+                </svg>
+              )
+            }
+          ]
+        };
+
+        const trackedItem = history.find(item => item.assessmentId === activeTrackingId);
+        if (!trackedItem) {
+          return (
+            <div className="glass-panel" style={{ padding: '3rem', textAlign: 'center', maxWidth: '600px', margin: '3rem auto' }}>
+              <p>{lang === 'hn' ? "Koi active injury tracking nahi mil rahi hai." : "No active injury tracking found."}</p>
+              <button className="btn btn-primary" onClick={() => setView('dashboard')}>Go to Dashboard</button>
+            </div>
+          );
+        }
+
+        const sortedLogs = [...recoveryLogs].sort((a, b) => new Date(a.date) - new Date(b.date));
+        const day1Log = sortedLogs[0];
+        const todayLog = sortedLogs[sortedLogs.length - 1];
+
+        const startDate = new Date(trackedItem.createdAt);
+        const todayDate = new Date();
+        const diffTime = Math.abs(todayDate - startDate);
+        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) || 1;
+
+        const day1Pain = day1Log ? day1Log.painLevel : (trackedItem.symptoms?.painLevel ?? 5);
+        const todayPain = todayLog ? todayLog.painLevel : (trackedItem.symptoms?.painLevel ?? 5);
+        let painPctChange = 0;
+        let painStatusText = "No Change";
+        let painColor = "var(--text-dark-secondary)";
+        if (day1Pain > 0) {
+          painPctChange = Math.round(((day1Pain - todayPain) / day1Pain) * 100);
+        } else if (day1Pain === 0 && todayPain > 0) {
+          painPctChange = -100;
+        }
+        
+        if (painPctChange > 0) {
+          painStatusText = `-${painPctChange}% (Pain kam hua!)`;
+          painColor = "var(--color-low)";
+        } else if (painPctChange < 0) {
+          painStatusText = `+${Math.abs(painPctChange)}% (Pain badh gaya)`;
+          painColor = "var(--color-emergency)";
+        }
+
+        const day1Swelling = day1Log ? day1Log.swelling : (trackedItem.symptoms?.swelling ?? 'none');
+        const todaySwelling = todayLog ? todayLog.swelling : (trackedItem.symptoms?.swelling ?? 'none');
+        const swellingRank = { none: 0, mild: 1, moderate: 2, severe: 3 };
+        const swellingLabelMap = { none: 'None', mild: 'Mild', moderate: 'Moderate', severe: 'Severe' };
+        let swellingStatusText = "No Change";
+        let swellingColor = "var(--text-dark-secondary)";
+        if (swellingRank[day1Swelling] > swellingRank[todaySwelling]) {
+          swellingStatusText = "Kam hui hai (Improved!)";
+          swellingColor = "var(--color-low)";
+        } else if (swellingRank[day1Swelling] < swellingRank[todaySwelling]) {
+          swellingStatusText = "Badh gayi hai";
+          swellingColor = "var(--color-emergency)";
+        }
+
+        const day1Mobility = day1Log ? day1Log.mobility : (trackedItem.symptoms?.movementAbility === 'normal' ? 'normal' : (trackedItem.symptoms?.movementAbility === 'partial' ? 'partial' : 'limited'));
+        const todayMobility = todayLog ? todayLog.mobility : (trackedItem.symptoms?.movementAbility === 'normal' ? 'normal' : (trackedItem.symptoms?.movementAbility === 'partial' ? 'partial' : 'limited'));
+        const mobilityRank = { normal: 3, partial: 2, limited: 1, very_little: 1, cannot_move: 0 };
+        const mobilityLabelMap = { normal: 'Normal', partial: 'Partial', limited: 'Limited', cannot_move: 'Cannot move' };
+        let mobilityStatusText = "No Change";
+        let mobilityColor = "var(--text-dark-secondary)";
+        if (mobilityRank[day1Mobility] < mobilityRank[todayMobility]) {
+          mobilityStatusText = "Behtar hui hai (Improved!)";
+          mobilityColor = "var(--color-low)";
+        } else if (mobilityRank[day1Mobility] > mobilityRank[todayMobility]) {
+          mobilityStatusText = "Kharab hui hai";
+          mobilityColor = "var(--color-emergency)";
+        }
+
+        return (
+          <div className="slide-in fade-in" style={{ maxWidth: '1000px', margin: '0 auto', paddingBottom: '3rem' }}>
+            <div className="glass-panel" style={{ padding: '1.5rem', marginBottom: '2rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
+              <div>
+                <h2 style={{ margin: 0, fontSize: '1.6rem', fontWeight: 800 }}>
+                  {lang === 'hi' ? "रिकवरी ट्रैकिंग डैशबोर्ड 📈" : (lang === 'hn' ? "Recovery Tracking Dashboard 📈" : "Recovery Tracking Dashboard 📈")}
+                </h2>
+                <p style={{ margin: '0.25rem 0 0 0', color: 'var(--text-dark-secondary)', fontSize: '0.9rem' }}>
+                  {lang === 'hi' ? `${trackedItem.injuryArea} की चोट के लिए दैनिक सुधार ट्रैक करें।` : (lang === 'hn' ? `${trackedItem.injuryArea} injury ke liye daily healing progress track karein.` : `Tracking daily healing progress for your ${trackedItem.injuryArea} injury.`)}
+                </p>
+              </div>
+              <div style={{ display: 'flex', gap: '0.75rem' }}>
+                <button 
+                  className="btn btn-primary glow-primary"
+                  onClick={() => {
+                    setLogForm({
+                      painLevel: todayLog ? todayLog.painLevel : 5,
+                      swelling: todayLog ? todayLog.swelling : 'none',
+                      mobility: todayLog ? todayLog.mobility : 'normal',
+                      notes: '',
+                      date: new Date().toISOString().split('T')[0]
+                    });
+                    setShowLogModal(true);
+                  }}
+                >
+                  {lang === 'hi' ? "दैनिक प्रगति दर्ज करें" : (lang === 'hn' ? "Daily Progress Log Karein" : "Log Daily Progress")}
+                </button>
+                <button className="btn btn-secondary" style={{ color: 'var(--color-emergency)', border: '1px solid rgba(239, 68, 68, 0.3)' }} onClick={handleStopTracking}>
+                  {lang === 'hi' ? "ट्रैकिंग बंद करें" : (lang === 'hn' ? "Tracking Stop Karein" : "Stop Tracking")}
+                </button>
+              </div>
+            </div>
+
+            {/* Sub Tabs Selection */}
+            <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1.5rem', borderBottom: '1px solid var(--border-dark)', paddingBottom: '0.5rem' }}>
+              <button 
+                className={`btn ${recoverySubTab === 'stats' ? 'btn-primary' : 'btn-secondary'}`}
+                style={{ padding: '0.5rem 1rem', fontSize: '0.85rem' }}
+                onClick={() => {
+                  setRecoverySubTab('stats');
+                  setActiveExercise(null);
+                  setRehabTimerRunning(false);
+                }}
+              >
+                {lang === 'hi' ? "सुधार चार्ट और सांख्यिकी" : (lang === 'hn' ? "Healing Chart & Stats" : "Healing Chart & Stats")}
+              </button>
+              <button 
+                className={`btn ${recoverySubTab === 'rehab' ? 'btn-primary' : 'btn-secondary'}`}
+                style={{ padding: '0.5rem 1rem', fontSize: '0.85rem' }}
+                onClick={() => setRecoverySubTab('rehab')}
+              >
+                {lang === 'hi' ? "फिजियोथेरेपी व्यायाम गाइड" : (lang === 'hn' ? "Physiotherapy Exercise Guide" : "Physiotherapy Exercise Guide")}
+              </button>
+            </div>
+
+            {recoverySubTab === 'stats' && (
+              <>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '1rem', marginBottom: '2rem' }}>
+              <div className="glass-panel" style={{ padding: '1rem', textAlign: 'center' }}>
+                <span style={{ fontSize: '0.8rem', color: 'var(--text-dark-secondary)', display: 'block', textTransform: 'uppercase', marginBottom: '0.25rem' }}>Injury Area</span>
+                <strong style={{ fontSize: '1.2rem', textTransform: 'capitalize', color: 'var(--primary)' }}>
+                  {lang === 'hi' ? (trackedItem.injuryArea === 'ankle' ? 'टखना' : trackedItem.injuryArea === 'knee' ? 'घुटना' : trackedItem.injuryArea === 'foot' ? 'पैर' : 'कलाई') : trackedItem.injuryArea}
+                </strong>
+              </div>
+              <div className="glass-panel" style={{ padding: '1rem', textAlign: 'center' }}>
+                <span style={{ fontSize: '0.8rem', color: 'var(--text-dark-secondary)', display: 'block', textTransform: 'uppercase', marginBottom: '0.25rem' }}>Triage Score</span>
+                <strong style={{ fontSize: '1.2rem', color: `var(--color-${trackedItem.riskLevel.toLowerCase()})` }}>
+                  {trackedItem.riskScore} ({trackedItem.riskLevel})
+                </strong>
+              </div>
+              <div className="glass-panel" style={{ padding: '1rem', textAlign: 'center' }}>
+                <span style={{ fontSize: '0.8rem', color: 'var(--text-dark-secondary)', display: 'block', textTransform: 'uppercase', marginBottom: '0.25rem' }}>Tracking Started</span>
+                <strong style={{ fontSize: '1.1rem' }}>
+                  {new Date(trackedItem.createdAt).toLocaleDateString()}
+                </strong>
+              </div>
+              <div className="glass-panel" style={{ padding: '1rem', textAlign: 'center' }}>
+                <span style={{ fontSize: '0.8rem', color: 'var(--text-dark-secondary)', display: 'block', textTransform: 'uppercase', marginBottom: '0.25rem' }}>Tracking Days</span>
+                <strong style={{ fontSize: '1.2rem', color: 'var(--primary)' }}>
+                  Day {diffDays}
+                </strong>
+              </div>
+            </div>
+
+            <div className="dashboard-grid">
+              <div>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1rem', marginBottom: '2rem' }}>
+                  <div className="glass-panel" style={{ padding: '1.25rem', borderTop: `4px solid ${painColor}` }}>
+                    <span style={{ fontSize: '0.85rem', color: 'var(--text-dark-secondary)', fontWeight: 600 }}>Pain Level Status</span>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginTop: '0.5rem' }}>
+                      <div>
+                        <span style={{ fontSize: '0.75rem', color: 'var(--text-dark-secondary)' }}>Day 1:</span> <strong style={{ fontSize: '1rem' }}>{day1Pain}</strong>
+                      </div>
+                      <div>
+                        <span style={{ fontSize: '0.75rem', color: 'var(--text-dark-secondary)' }}>Today:</span> <strong style={{ fontSize: '1.4rem' }}>{todayPain}</strong>
+                      </div>
+                    </div>
+                    <div style={{ marginTop: '0.5rem', fontWeight: 700, fontSize: '0.9rem', color: painColor }}>
+                      {painStatusText}
+                    </div>
+                  </div>
+
+                  <div className="glass-panel" style={{ padding: '1.25rem', borderTop: `4px solid ${swellingColor}` }}>
+                    <span style={{ fontSize: '0.85rem', color: 'var(--text-dark-secondary)', fontWeight: 600 }}>Swelling (Sujan)</span>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginTop: '0.5rem' }}>
+                      <div>
+                        <span style={{ fontSize: '0.75rem', color: 'var(--text-dark-secondary)' }}>Day 1:</span> <strong style={{ fontSize: '0.9rem', textTransform: 'capitalize' }}>{swellingLabelMap[day1Swelling] || day1Swelling}</strong>
+                      </div>
+                      <div>
+                        <span style={{ fontSize: '0.75rem', color: 'var(--text-dark-secondary)' }}>Today:</span> <strong style={{ fontSize: '1.1rem', textTransform: 'capitalize' }}>{swellingLabelMap[todaySwelling] || todaySwelling}</strong>
+                      </div>
+                    </div>
+                    <div style={{ marginTop: '0.5rem', fontWeight: 700, fontSize: '0.9rem', color: swellingColor }}>
+                      {swellingStatusText}
+                    </div>
+                  </div>
+
+                  <div className="glass-panel" style={{ padding: '1.25rem', borderTop: `4px solid ${mobilityColor}` }}>
+                    <span style={{ fontSize: '0.85rem', color: 'var(--text-dark-secondary)', fontWeight: 600 }}>Mobility (Movement)</span>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginTop: '0.5rem' }}>
+                      <div>
+                        <span style={{ fontSize: '0.75rem', color: 'var(--text-dark-secondary)' }}>Day 1:</span> <strong style={{ fontSize: '0.9rem', textTransform: 'capitalize' }}>{mobilityLabelMap[day1Mobility] || day1Mobility}</strong>
+                      </div>
+                      <div>
+                        <span style={{ fontSize: '0.75rem', color: 'var(--text-dark-secondary)' }}>Today:</span> <strong style={{ fontSize: '1.1rem', textTransform: 'capitalize' }}>{mobilityLabelMap[todayMobility] || todayMobility}</strong>
+                      </div>
+                    </div>
+                    <div style={{ marginTop: '0.5rem', fontWeight: 700, fontSize: '0.9rem', color: mobilityColor }}>
+                      {mobilityStatusText}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="glass-panel" style={{ padding: '1.5rem', marginBottom: '2rem' }}>
+                  <h3 style={{ fontSize: '1.2rem', marginBottom: '1rem' }}>
+                    {lang === 'hi' ? "दर्द का स्तर ग्राफ (Pain Trend)" : (lang === 'hn' ? "Pain Level Trend (0-10)" : "Pain Level Trend Over Time")}
+                  </h3>
+                  
+                  {(() => {
+                    const width = 600;
+                    const height = 250;
+                    const paddingX = 50;
+                    const paddingY = 30;
+                    const plotWidth = width - 2 * paddingX;
+                    const plotHeight = height - 2 * paddingY;
+                    const N = sortedLogs.length;
+
+                    const points = sortedLogs.map((log, idx) => {
+                      const x = N > 1 ? paddingX + (idx * plotWidth) / (N - 1) : paddingX + plotWidth / 2;
+                      const y = paddingY + plotHeight - (log.painLevel * plotHeight) / 10;
+                      return { x, y, log };
+                    });
+
+                    let linePath = "";
+                    points.forEach((pt, idx) => {
+                      if (idx === 0) {
+                        linePath += `M ${pt.x} ${pt.y}`;
+                      } else {
+                        linePath += ` L ${pt.x} ${pt.y}`;
+                      }
+                    });
+
+                    let areaPath = "";
+                    if (points.length > 0) {
+                      const firstX = points[0].x;
+                      const lastX = points[points.length - 1].x;
+                      areaPath = `${linePath} L ${lastX} ${paddingY + plotHeight} L ${firstX} ${paddingY + plotHeight} Z`;
+                    }
+
+                    return (
+                      <div style={{ position: 'relative' }}>
+                        <svg width="100%" height={height} viewBox={`0 0 ${width} ${height}`} style={{ background: 'rgba(0,0,0,0.15)', borderRadius: '8px', overflow: 'visible' }}>
+                          {[0, 2, 4, 6, 8, 10].map((val) => {
+                            const y = paddingY + plotHeight - (val * plotHeight) / 10;
+                            return (
+                              <g key={val}>
+                                <line x1={paddingX} y1={y} x2={width - paddingX} y2={y} stroke="rgba(255,255,255,0.05)" strokeDasharray="3 3" />
+                                <text x={paddingX - 12} y={y + 4} fill="var(--text-dark-secondary)" fontSize="10" textAnchor="end">{val}</text>
+                              </g>
+                            );
+                          })}
+
+                          <defs>
+                            <linearGradient id="chartGradient" x1="0" y1="0" x2="0" y2="1">
+                              <stop offset="0%" stopColor="var(--primary)" stopOpacity="0.4" />
+                              <stop offset="100%" stopColor="var(--primary)" stopOpacity="0.0" />
+                            </linearGradient>
+                          </defs>
+
+                          {areaPath && <path d={areaPath} fill="url(#chartGradient)" />}
+
+                          {linePath && <path d={linePath} fill="none" stroke="var(--primary)" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />}
+
+                          {points.map((pt, idx) => {
+                            const isHovered = hoveredLog && hoveredLog.id === pt.log.id;
+                            return (
+                              <g key={pt.log.id}>
+                                <circle 
+                                  cx={pt.x} 
+                                  cy={pt.y} 
+                                  r={isHovered ? "7" : "5"} 
+                                  fill="var(--primary)" 
+                                  stroke="#ffffff" 
+                                  strokeWidth="2" 
+                                  style={{ cursor: 'pointer', transition: 'all 0.1s ease' }}
+                                  onMouseEnter={() => setHoveredLog(pt.log)}
+                                  onMouseLeave={() => setHoveredLog(null)}
+                                />
+                                <circle 
+                                  cx={pt.x} 
+                                  cy={pt.y} 
+                                  r="15" 
+                                  fill="transparent" 
+                                  style={{ cursor: 'pointer' }}
+                                  onMouseEnter={() => setHoveredLog(pt.log)}
+                                  onMouseLeave={() => setHoveredLog(null)}
+                                />
+                                <text x={pt.x} y={height - 8} fill="var(--text-dark-secondary)" fontSize="9" textAnchor="middle" transform={`rotate(-15 ${pt.x} ${height - 8})`}>
+                                  {new Date(pt.log.date).toLocaleDateString(undefined, {month: 'short', day: 'numeric'})}
+                                </text>
+                              </g>
+                            );
+                          })}
+                        </svg>
+
+                        {hoveredLog && (
+                          <div 
+                            className="glass-panel" 
+                            style={{ 
+                              position: 'absolute', 
+                              top: '10px', 
+                              right: '10px', 
+                              padding: '0.75rem', 
+                              background: 'rgba(15, 23, 42, 0.95)', 
+                              border: '1px solid var(--primary)', 
+                              borderRadius: '8px', 
+                              fontSize: '0.8rem', 
+                              width: '160px',
+                              zIndex: 10
+                            }}
+                          >
+                            <div style={{ fontWeight: 'bold', borderBottom: '1px solid rgba(255,255,255,0.1)', paddingBottom: '0.25rem', marginBottom: '0.25rem' }}>
+                              {new Date(hoveredLog.date).toLocaleDateString()}
+                            </div>
+                            <div>Pain Level: <strong style={{ color: 'var(--primary)' }}>{hoveredLog.painLevel}/10</strong></div>
+                            <div>Sujan: <span style={{ textTransform: 'capitalize' }}>{swellingLabelMap[hoveredLog.swelling] || hoveredLog.swelling}</span></div>
+                            <div>Mobility: <span style={{ textTransform: 'capitalize' }}>{mobilityLabelMap[hoveredLog.mobility] || hoveredLog.mobility}</span></div>
+                            {hoveredLog.notes && <div style={{ fontStyle: 'italic', opacity: 0.8, marginTop: '0.25rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>"{hoveredLog.notes}"</div>}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })()}
+                </div>
+              </div>
+
+              <div>
+                <div className="glass-panel" style={{ padding: '1.5rem', maxHeight: '420px', overflowY: 'auto' }}>
+                  <h3 style={{ fontSize: '1.1rem', marginBottom: '1rem', borderBottom: '1px solid rgba(255,255,255,0.05)', paddingBottom: '0.5rem' }}>
+                    {lang === 'hi' ? "चेक-इन इतिहास (Logs)" : (lang === 'hn' ? "Daily Logs History" : "Check-in Logs")}
+                  </h3>
+
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                    {sortedLogs.map((log) => (
+                      <div 
+                        key={log.id} 
+                        className="glass-panel" 
+                        style={{ padding: '0.75rem', background: 'rgba(255,255,255,0.01)', border: '1px solid var(--border-dark)' }}
+                      >
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.25rem' }}>
+                          <span style={{ fontWeight: 700, fontSize: '0.85rem' }}>
+                            {log.id.startsWith('log_init_') ? (lang === 'hn' ? "Day 1 (Initial)" : "Day 1 (Initial)") : new Date(log.date).toLocaleDateString()}
+                          </span>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                            <span className="badge badge-low" style={{ fontSize: '0.7rem', padding: '0.1rem 0.4rem' }}>
+                              Pain: {log.painLevel}
+                            </span>
+                            {!log.id.startsWith('log_init_') && (
+                              <button 
+                                style={{ background: 'none', border: 'none', color: 'var(--color-emergency)', cursor: 'pointer', padding: 0 }}
+                                onClick={() => handleLogDelete(log.id)}
+                              >
+                                <Trash2 size={13} />
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                        <div style={{ fontSize: '0.75rem', color: 'var(--text-dark-secondary)' }}>
+                          <span>Sujan: {swellingLabelMap[log.swelling] || log.swelling} | Mobility: {mobilityLabelMap[log.mobility] || log.mobility}</span>
+                          {log.notes && <p style={{ margin: '0.25rem 0 0 0', fontStyle: 'italic' }}>"{log.notes}"</p>}
+                        </div>
+                      </div>
+                    ))}
+
+                    {sortedLogs.length === 0 && (
+                      <p style={{ textAlign: 'center', color: 'var(--text-dark-secondary)', fontSize: '0.85rem' }}>
+                        No logs recorded yet.
+                      </p>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </>
+        )}
+
+        {recoverySubTab === 'rehab' && (
+          <div className="dashboard-grid fade-in">
+            {/* Left Column: Exercises Grid */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '1.5rem' }}>
+                {(REHAB_EXERCISES[trackedItem.injuryArea] || []).map((ex) => {
+                  const todayStr = new Date().toISOString().split('T')[0];
+                  const todayLog = sortedLogs.find(log => log.date === todayStr);
+                  const isDone = todayLog && todayLog.completedExercises?.includes(ex.id);
+
+                  return (
+                    <div 
+                      key={ex.id} 
+                      className="glass-panel" 
+                      style={{ 
+                        padding: '1.25rem', 
+                        border: isDone ? '1px solid var(--color-low)' : '1px solid var(--border-dark)',
+                        background: isDone ? 'rgba(34, 197, 94, 0.04)' : 'rgba(255,255,255,0.01)',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        justifyContent: 'space-between',
+                        gap: '1rem'
+                      }}
+                    >
+                      <div style={{ display: 'flex', gap: '1rem', alignItems: 'flex-start' }}>
+                        <div style={{ color: isDone ? 'var(--color-low)' : 'var(--text-dark-secondary)', background: 'rgba(255,255,255,0.02)', padding: '0.5rem', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-dark)' }}>
+                          {ex.svg}
+                        </div>
+                        <div style={{ flex: 1 }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.25rem' }}>
+                            <h4 style={{ margin: 0, fontSize: '0.95rem', fontWeight: 700 }}>{ex.name}</h4>
+                          </div>
+                          {isDone && (
+                            <span style={{ color: 'var(--color-low)', display: 'inline-flex', alignItems: 'center', gap: '0.2rem', fontSize: '0.75rem', fontWeight: 'bold', marginBottom: '0.25rem' }}>
+                              <CheckCircle2 size={13} /> DONE
+                            </span>
+                          )}
+                          <p style={{ margin: 0, fontSize: '0.75rem', color: 'var(--text-dark-secondary)', lineHeight: '1.1rem' }}>
+                            {ex.description}
+                          </p>
+                        </div>
+                      </div>
+
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid rgba(255,255,255,0.05)', paddingTop: '0.75rem', fontSize: '0.75rem', color: 'var(--text-dark-secondary)' }}>
+                        <span style={{ fontWeight: 600 }}>{ex.sets}</span>
+                        <button 
+                          className="btn btn-primary"
+                          style={{ padding: '0.35rem 0.7rem', fontSize: '0.75rem', background: isDone ? 'var(--color-low)' : 'var(--primary)' }}
+                          onClick={() => startRehabTimer(ex)}
+                        >
+                          {isDone ? (lang === 'hn' ? "Dobaara Karein" : "Restart") : (lang === 'hn' ? "Timer Start" : "Start Exercise")}
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Right Column: Timer Panel */}
+            <div>
+              <div className="glass-panel" style={{ padding: '2rem', textAlign: 'center', minHeight: '300px', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', gap: '1.25rem', position: 'sticky', top: '20px' }}>
+                {activeExercise ? (
+                  <>
+                    <h3 style={{ fontSize: '1.3rem', margin: 0, color: 'var(--text-dark-primary)' }}>{activeExercise.name}</h3>
+                    <p style={{ fontSize: '0.8rem', color: 'var(--text-dark-secondary)', margin: 0, lineHeight: '1.2rem' }}>
+                      {lang === 'hn' ? "Apne posture me hold karein aur focus karein!" : "Maintain correct posture and hold the stretch!"}
+                    </p>
+
+                    <div style={{ fontSize: '3.5rem', fontWeight: 800, fontFamily: 'monospace', margin: '0.5rem 0', color: 'var(--primary)', textShadow: '0 0 15px rgba(59, 130, 246, 0.4)' }}>
+                      {rehabTimer}s
+                    </div>
+
+                    <div style={{ display: 'flex', gap: '0.75rem' }}>
+                      <button 
+                        className="btn btn-primary"
+                        onClick={toggleRehabTimer}
+                        style={{ padding: '0.5rem 1.25rem', fontSize: '0.85rem' }}
+                      >
+                        {rehabTimerRunning ? "Pause" : "Start"}
+                      </button>
+                      <button 
+                        className="btn btn-secondary"
+                        onClick={resetRehabTimer}
+                        style={{ padding: '0.5rem 1.25rem', fontSize: '0.85rem' }}
+                      >
+                        Reset
+                      </button>
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <Clock size={56} style={{ color: 'var(--text-dark-secondary)', strokeWidth: 1.5, marginBottom: '0.5rem' }} />
+                    <h4 style={{ margin: 0, fontSize: '1.1rem' }}>{lang === 'hn' ? "Koi Exercise select karein" : "Select an Exercise"}</h4>
+                    <p style={{ fontSize: '0.8rem', color: 'var(--text-dark-secondary)', margin: 0, lineHeight: '1.2rem' }}>
+                      {lang === 'hn' ? "Apni exercise shuru karne ke liye left card me 'Start' button dabaayein." : "Click 'Start Exercise' on the left to activate the countdown timer."}
+                    </p>
+                  </>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  })()}
+
+      {/* --- DAILY PROGRESS CHECK-IN MODAL --- */}
+      {showLogModal && (
+        <div 
+          style={{ 
+            position: 'fixed', 
+            top: 0, 
+            left: 0, 
+            right: 0, 
+            bottom: 0, 
+            background: 'rgba(15, 23, 42, 0.75)', 
+            backdropFilter: 'blur(8px)',
+            display: 'flex', 
+            justifyContent: 'center', 
+            alignItems: 'center', 
+            zIndex: 1100 
+          }}
+        >
+          <div 
+            className="glass-panel slide-in" 
+            style={{ 
+              width: '100%', 
+              maxWidth: '450px', 
+              padding: '2rem', 
+              background: darkMode ? 'rgba(30, 41, 59, 0.95)' : 'rgba(255, 255, 255, 0.95)',
+              border: '1px solid var(--primary)',
+              borderRadius: 'var(--radius-md)'
+            }}
+          >
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
+              <h3 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 800 }}>
+                {lang === 'hi' ? "दैनिक प्रगति दर्ज करें" : (lang === 'hn' ? "Daily Progress Log Karein" : "Log Daily Progress")}
+              </h3>
+              <button 
+                style={{ background: 'none', border: 'none', color: 'inherit', cursor: 'pointer', display: 'flex', alignItems: 'center', padding: 0 }}
+                onClick={() => setShowLogModal(false)}
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            <form onSubmit={handleLogSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1.2rem' }}>
+              <div>
+                <style>{`
+                  input[type=range] {
+                    -webkit-appearance: none;
+                    width: 100%;
+                    background: transparent;
+                  }
+                  input[type=range]:focus {
+                    outline: none;
+                  }
+                  input[type=range]::-webkit-slider-runnable-track {
+                    width: 100%;
+                    height: 8px;
+                    cursor: pointer;
+                    background: rgba(255,255,255,0.1);
+                    border-radius: 4px;
+                    border: 1px solid var(--border-dark);
+                  }
+                  input[type=range]::-webkit-slider-thumb {
+                    height: 18px;
+                    width: 18px;
+                    border-radius: 50%;
+                    background: var(--primary);
+                    cursor: pointer;
+                    -webkit-appearance: none;
+                    margin-top: -6px;
+                    box-shadow: 0 0 10px var(--primary);
+                  }
+                `}</style>
+                <label style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 600, fontSize: '0.9rem', marginBottom: '0.4rem' }}>
+                  <span>Pain Level (0 to 10):</span>
+                  <span style={{ color: 'var(--primary)', fontWeight: 700 }}>{logForm.painLevel}/10</span>
+                </label>
+                <input 
+                  type="range" 
+                  min="0" 
+                  max="10" 
+                  value={logForm.painLevel}
+                  onChange={(e) => setLogForm(prev => ({ ...prev, painLevel: parseInt(e.target.value) }))}
+                  style={{ width: '100%', cursor: 'pointer' }}
+                />
+              </div>
+
+              <div>
+                <label style={{ display: 'block', fontWeight: 600, fontSize: '0.9rem', marginBottom: '0.4rem' }}>
+                  {lang === 'hi' ? "सूजन (Swelling):" : (lang === 'hn' ? "Sujan (Swelling) level:" : "Swelling Level:")}
+                </label>
+                <select 
+                  className="glass-panel" 
+                  value={logForm.swelling}
+                  onChange={(e) => setLogForm(prev => ({ ...prev, swelling: e.target.value }))}
+                  style={{ width: '100%', padding: '0.5rem', color: 'inherit', background: 'var(--bg-dark)' }}
+                >
+                  <option value="none" style={{ background: 'var(--bg-dark)', color: '#fff' }}>{lang === 'hi' ? 'कोई सूजन नहीं (None)' : (lang === 'hn' ? 'Kuch nahi (None)' : 'None')}</option>
+                  <option value="mild" style={{ background: 'var(--bg-dark)', color: '#fff' }}>{lang === 'hi' ? 'हल्की (Mild)' : (lang === 'hn' ? 'Thoda (Mild)' : 'Mild')}</option>
+                  <option value="moderate" style={{ background: 'var(--bg-dark)', color: '#fff' }}>{lang === 'hi' ? 'मध्यम (Moderate)' : (lang === 'hn' ? 'Medium (Moderate)' : 'Moderate')}</option>
+                  <option value="severe" style={{ background: 'var(--bg-dark)', color: '#fff' }}>{lang === 'hi' ? 'अत्यधिक सूजन (Severe)' : (lang === 'hn' ? 'Bahut zyada (Severe)' : 'Severe')}</option>
+                </select>
+              </div>
+
+              <div>
+                <label style={{ display: 'block', fontWeight: 600, fontSize: '0.9rem', marginBottom: '0.4rem' }}>
+                  {lang === 'hi' ? "मोबिलिटी (Mobility / Movement):" : (lang === 'hn' ? "Joint Movement (Mobility):" : "Mobility / Movement:")}
+                </label>
+                <select 
+                  className="glass-panel" 
+                  value={logForm.mobility}
+                  onChange={(e) => setLogForm(prev => ({ ...prev, mobility: e.target.value }))}
+                  style={{ width: '100%', padding: '0.5rem', color: 'inherit', background: 'var(--bg-dark)' }}
+                >
+                  <option value="normal" style={{ background: 'var(--bg-dark)', color: '#fff' }}>{lang === 'hi' ? 'सामान्य (Normal)' : (lang === 'hn' ? 'Normal (Full Movement)' : 'Normal')}</option>
+                  <option value="partial" style={{ background: 'var(--bg-dark)', color: '#fff' }}>{lang === 'hi' ? 'आंशिक (Partial)' : (lang === 'hn' ? 'Kam (Limited Movement)' : 'Partial')}</option>
+                  <option value="limited" style={{ background: 'var(--bg-dark)', color: '#fff' }}>{lang === 'hi' ? 'सीमित (Limited)' : (lang === 'hn' ? 'Bahut kam (Very Limited)' : 'Limited')}</option>
+                  <option value="cannot_move" style={{ background: 'var(--bg-dark)', color: '#fff' }}>{lang === 'hi' ? 'बिल्कुल नहीं (Cannot move)' : (lang === 'hn' ? 'Bilkul nahi (Cannot move)' : 'Cannot move')}</option>
+                </select>
+              </div>
+
+              <div>
+                <label style={{ display: 'block', fontWeight: 600, fontSize: '0.9rem', marginBottom: '0.4rem' }}>
+                  {lang === 'hi' ? "तारीख (Date):" : (lang === 'hn' ? "Date (Tariq):" : "Date:")}
+                </label>
+                <input 
+                  type="date"
+                  className="glass-panel"
+                  value={logForm.date}
+                  onChange={(e) => setLogForm(prev => ({ ...prev, date: e.target.value }))}
+                  style={{ width: '100%', padding: '0.5rem', color: 'inherit', background: 'var(--bg-dark)', outline: 'none' }}
+                />
+              </div>
+
+              <div>
+                <label style={{ display: 'block', fontWeight: 600, fontSize: '0.9rem', marginBottom: '0.4rem' }}>
+                  {lang === 'hi' ? "टिप्पणी (Notes):" : (lang === 'hn' ? "Extra Notes (Kya feel ho raha hai):" : "Notes:")}
+                </label>
+                <textarea 
+                  className="glass-panel"
+                  rows="3"
+                  placeholder={lang === 'hi' ? 'दवा का असर, सुन्न होना, आदि...' : (lang === 'hn' ? 'Koi ajeeb dard, sujan ya improvement...' : 'E.g., pain relief after icing, skin color normal...')}
+                  value={logForm.notes}
+                  onChange={(e) => setLogForm(prev => ({ ...prev, notes: e.target.value }))}
+                  style={{ width: '100%', padding: '0.5rem', color: 'inherit', background: 'var(--bg-dark)', outline: 'none', resize: 'vertical' }}
+                />
+              </div>
+
+              <div style={{ display: 'flex', gap: '0.75rem', marginTop: '0.5rem' }}>
+                <button type="submit" className="btn btn-primary" style={{ flex: 1, justifyContent: 'center' }}>
+                  {lang === 'hi' ? "सुरक्षित करें" : (lang === 'hn' ? "Progress Save Karein" : "Save Log")}
+                </button>
+                <button type="button" className="btn btn-secondary" style={{ flex: 1, justifyContent: 'center' }} onClick={() => setShowLogModal(false)}>
+                  {t.cancel}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* --- MOCK SOS EMERGENCY ALERT DIALOG --- */}
+      {isSosOpen && (
+        <div className="modal-overlay fade-in" style={{ zIndex: 1001 }}>
+          <div className="glass-panel slide-in" style={{ padding: '2.5rem', maxWidth: '500px', width: '90%', textAlign: 'center', borderTop: '8px solid var(--color-emergency)' }}>
+            <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '1.25rem' }}>
+              <div 
+                className="pulse-critical" 
+                style={{ 
+                  width: '80px', 
+                  height: '80px', 
+                  borderRadius: '50%', 
+                  background: 'rgba(239, 68, 68, 0.1)', 
+                  display: 'flex', 
+                  alignItems: 'center', 
+                  justifyContent: 'center',
+                  border: '2px solid var(--color-emergency)'
+                }}
+              >
+                <AlertTriangle size={40} color="var(--color-emergency)" />
+              </div>
+            </div>
+            
+            <h3 style={{ fontSize: '1.6rem', fontWeight: 800, color: 'white', marginBottom: '0.75rem' }}>
+              {lang === 'hi' ? "आपातकालीन SOS सक्रिय!" : (lang === 'hn' ? "Emergency SOS Active!" : "Emergency SOS Triggered!")}
+            </h3>
+
+            {sosStatus === 'idle' && (() => {
+              // Automatically trigger mock cellular workflow
+              setSosStatus('locating');
+              setTimeout(() => setSosStatus('sending'), 1500);
+              setTimeout(() => setSosStatus('sent'), 3500);
+              return null;
+            })()}
+
+            {sosStatus === 'locating' && (
+              <p style={{ fontSize: '0.95rem', color: 'var(--text-dark-secondary)', marginBottom: '1.5rem' }}>
+                📍 Locating your device GPS coordinates...
+              </p>
+            )}
+
+            {sosStatus === 'sending' && (
+              <p style={{ fontSize: '0.95rem', color: 'var(--text-dark-secondary)', marginBottom: '1.5rem' }}>
+                📡 Sending pre-configured clinical SOS SMS to **Athletic Coach (+91 98765-43210)**...
+              </p>
+            )}
+
+            {sosStatus === 'sent' && (
+              <div style={{ animation: 'fadeIn 0.5s ease-out' }}>
+                <div style={{ background: 'rgba(34, 197, 94, 0.1)', border: '1px solid rgba(34, 197, 94, 0.3)', borderRadius: '12px', padding: '1rem', marginBottom: '1.5rem', textAlign: 'left', fontSize: '0.85rem' }}>
+                  <div style={{ fontWeight: 'bold', color: 'var(--color-low)', marginBottom: '0.25rem', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+                    <CheckCircle2 size={14} /> SMS DELIVERED SUCCESSFULLY
+                  </div>
+                  <div style={{ color: 'white', fontFamily: 'monospace', fontStyle: 'italic', lineHeight: 1.4 }}>
+                    "🚨 EMERGENCY SOS! Patient Karan has triggered an InjuryIQ AI Triage Emergency Alert. GPS Coordinates: 28.6139, 77.2090. Please provide medical assistance immediately."
+                  </div>
+                </div>
+                <p style={{ fontSize: '0.95rem', color: 'var(--color-low)', fontWeight: 'bold', marginBottom: '1.5rem' }}>
+                  ✅ Mock Alert SMS Sent! Local authorities and medical coaches notified.
+                </p>
+              </div>
+            )}
+
+            <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center' }}>
+              <button 
+                className="btn btn-secondary" 
+                onClick={() => {
+                  setIsSosOpen(false);
+                  setSosStatus('idle');
+                }}
+              >
+                {lang === 'hi' ? "बंद करें" : (lang === 'hn' ? "Close Karein" : "Close")}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* --- PERSISTENT FLOATING TRILINGUAL CHATBOT WIDGET --- */}
+      <div 
+        style={{ 
+          position: 'fixed', 
+          bottom: '24px', 
+          right: '24px', 
+          zIndex: 1000, 
+          fontFamily: 'var(--font-sans)',
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'flex-end'
+        }}
+      >
+        {chatOpen ? (
+          <div 
+            className="glass-panel" 
+            style={{ 
+              width: '360px', 
+              height: '460px', 
+              display: 'flex', 
+              flexDirection: 'column', 
+              background: darkMode ? 'rgba(15, 23, 42, 0.95)' : 'rgba(255, 255, 255, 0.95)',
+              border: '1px solid var(--primary)',
+              borderRadius: 'var(--radius-md)',
+              overflow: 'hidden',
+              marginBottom: '12px',
+              boxShadow: '0 20px 40px rgba(0, 0, 0, 0.5)'
+            }}
+          >
+            {/* Chatbot Header */}
+            <div style={{ background: 'var(--primary)', color: 'white', padding: '0.85rem 1rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <Activity size={18} />
+                <span style={{ fontWeight: 700, fontSize: '0.95rem' }}>{t.chatbotTitle}</span>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                {/* Voice TTS Toggle button */}
+                <button 
+                  onClick={() => setVoiceMuted(!voiceMuted)}
+                  style={{ background: 'none', border: 'none', color: 'white', cursor: 'pointer', display: 'flex', alignItems: 'center', padding: '0.25rem' }}
+                  title={voiceMuted ? "Unmute Voice Responses" : "Mute Voice Responses"}
+                >
+                  {voiceMuted ? <VolumeX size={18} /> : <Volume2 size={18} />}
+                </button>
+                {/* Gemini Settings button */}
+                <button 
+                  onClick={() => setShowSettings(!showSettings)}
+                  style={{ background: 'none', border: 'none', color: 'white', cursor: 'pointer', display: 'flex', alignItems: 'center', padding: '0.25rem' }}
+                  title="Configure Gemini API Settings"
+                >
+                  <Settings size={18} style={{ transform: showSettings ? 'rotate(45deg)' : 'none', transition: 'transform 0.3s ease' }} />
+                </button>
+                <button 
+                  onClick={() => setChatOpen(false)}
+                  style={{ background: 'none', border: 'none', color: 'white', cursor: 'pointer', display: 'flex', alignItems: 'center', padding: '0.25rem' }}
+                >
+                  <X size={18} />
+                </button>
+              </div>
+            </div>
+
+            {showSettings ? (
+              <div style={{ flex: 1, padding: '1rem', display: 'flex', flexDirection: 'column', gap: '0.8rem', fontSize: '0.85rem', background: darkMode ? 'rgba(15, 23, 42, 0.98)' : '#fff' }}>
+                <div style={{ fontWeight: 'bold', fontSize: '0.95rem', borderBottom: '1px solid rgba(255,255,255,0.08)', paddingBottom: '0.5rem' }}>
+                  🔑 Google Gemini AI Settings
+                </div>
+                <p style={{ fontSize: '0.75rem', opacity: 0.8, lineHeight: '1.1rem' }}>
+                  By default, InjuryIQ uses a localized trilingual keyword database. Add a Google Gemini API Key to enable dynamic conversational responses.
+                </p>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
+                  <label style={{ fontSize: '0.75rem', fontWeight: 600 }}>Gemini API Key:</label>
+                  <input 
+                    type="password"
+                    placeholder="AIzaSy..."
+                    value={geminiKey}
+                    onChange={(e) => {
+                      setGeminiKey(e.target.value);
+                      localStorage.setItem('injuryiq_gemini_key', e.target.value);
+                    }}
+                    style={{ 
+                      width: '100%', 
+                      padding: '0.5rem', 
+                      background: darkMode ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)', 
+                      border: '1px solid var(--border-dark)', 
+                      borderRadius: 'var(--radius-sm)', 
+                      color: 'inherit',
+                      outline: 'none'
+                    }}
+                  />
+                </div>
+                <div style={{ fontSize: '0.7rem', opacity: 0.7, padding: '0.5rem', background: 'rgba(59,130,246,0.08)', borderRadius: '4px', border: '1px dashed rgba(59,130,246,0.3)', lineHeight: '1rem' }}>
+                  <strong>How to get a free key:</strong><br />
+                  1. Visit <a href="https://aistudio.google.com/" target="_blank" rel="noreferrer" style={{ color: 'var(--primary)', textDecoration: 'underline' }}>Google AI Studio</a>.<br />
+                  2. Sign in and click <strong>"Get API Key"</strong>.<br />
+                  3. Create a free API key and paste it here.
+                </div>
+                <button 
+                  className="btn btn-primary" 
+                  style={{ marginTop: 'auto', width: '100%', padding: '0.6rem' }}
+                  onClick={() => {
+                    setShowSettings(false);
+                    if (geminiKey.trim()) {
+                      setChatMessages(prev => [...prev, { sender: 'bot', text: "✨ Google Gemini AI is now active! Ask me any dynamic questions about your injuries." }]);
+                    } else {
+                      setChatMessages(prev => [...prev, { sender: 'bot', text: "🔄 Switched back to standard Local Rules Engine." }]);
+                    }
+                  }}
+                >
+                  Save & Connect
+                </button>
+              </div>
+            ) : (
+              <>
+                {/* Chatbot Message Stream */}
+                <div style={{ flex: 1, padding: '1rem', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '0.75rem', fontSize: '0.85rem' }}>
+                  {chatMessages.map((msg, index) => (
+                    <div 
+                      key={index}
+                      style={{ 
+                        alignSelf: msg.sender === 'user' ? 'flex-end' : 'flex-start',
+                        maxWidth: '80%',
+                        background: msg.sender === 'user' 
+                          ? 'var(--primary)' 
+                          : (darkMode ? 'rgba(255, 255, 255, 0.08)' : 'rgba(15, 23, 42, 0.05)'),
+                        color: msg.sender === 'user' ? 'white' : 'inherit',
+                        padding: '0.65rem 0.85rem',
+                        borderRadius: msg.sender === 'user' ? '12px 12px 2px 12px' : '12px 12px 12px 2px',
+                        whiteSpace: 'pre-wrap'
+                      }}
+                    >
+                      {msg.text}
+                    </div>
+                  ))}
+                  {chatTyping && (
+                    <div style={{ alignSelf: 'flex-start', background: darkMode ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.05)', padding: '0.5rem 0.85rem', borderRadius: '12px 12px 12px 2px', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+                      <RefreshCw size={12} style={{ animation: 'spin 1.5s linear infinite' }} />
+                      <span style={{ fontSize: '0.75rem', fontStyle: 'italic' }}>typing...</span>
+                    </div>
+                  )}
+                  <div ref={chatEndRef} />
+                </div>
+
+                {/* Chatbot Quick Recommendations Panel */}
+                <div style={{ padding: '0.5rem 1rem', display: 'flex', flexWrap: 'wrap', gap: '0.35rem', borderTop: '1px solid rgba(255,255,255,0.05)', background: 'rgba(0,0,0,0.1)' }}>
+                  {[
+                    { label: lang === 'hi' ? "मोच vs फ्रैक्चर" : (lang === 'hn' ? "sprain vs fracture" : "Sprain vs Fracture"), query: "sprain vs fracture" },
+                    { label: lang === 'hi' ? "बर्फ सेक नियम" : (lang === 'hn' ? "ice rules" : "Ice rules"), query: "ice rules" },
+                    { label: lang === 'hi' ? "R.I.C.E. गाइड" : "R.I.C.E. first aid", query: "R.I.C.E." },
+                    { label: lang === 'hi' ? "खतरे के संकेत" : (lang === 'hn' ? "danger signs" : "Danger signs"), query: "danger flags" }
+                  ].map((tag, idx) => (
+                    <button 
+                      key={idx}
+                      onClick={() => handleSendChat(tag.query)}
+                      style={{ background: darkMode ? 'rgba(255,255,255,0.05)' : 'rgba(15,23,42,0.05)', border: '1px solid var(--border-dark)', borderRadius: '999px', padding: '0.25rem 0.5rem', fontSize: '0.7rem', color: 'inherit', cursor: 'pointer', transition: 'var(--transition-smooth)' }}
+                    >
+                      {tag.label}
+                    </button>
+                  ))}
+                </div>
+
+                {/* Chatbot Input Box */}
+                <div style={{ display: 'flex', borderTop: '1px solid var(--border-dark)', background: darkMode ? 'rgba(30, 41, 59, 0.5)' : '#fff', alignItems: 'center' }}>
+                  <input 
+                    type="text" 
+                    placeholder={t.chatPlaceholder}
+                    value={chatInput}
+                    onChange={(e) => setChatInput(e.target.value)}
+                    onKeyDown={(e) => e.key === 'Enter' && handleSendChat()}
+                    style={{ flex: 1, background: 'none', border: 'none', padding: '0.75rem 1rem', color: 'inherit', fontSize: '0.85rem', outline: 'none' }}
+                  />
+                  
+                  {/* Voice Input Microphone Button */}
+                  <button 
+                    onClick={startVoiceRecognition}
+                    style={{ 
+                      background: 'none', 
+                      border: 'none', 
+                      color: isListening ? 'var(--color-emergency)' : 'var(--text-dark-secondary)', 
+                      cursor: 'pointer', 
+                      padding: '0.5rem',
+                      marginRight: '0.25rem',
+                      display: 'flex',
+                      alignItems: 'center',
+                      animation: isListening ? 'pulseMic 1.2s infinite' : 'none'
+                    }}
+                    title="Speak to Assistant"
+                  >
+                    {isListening ? <Mic size={18} /> : <Mic size={18} />}
+                  </button>
+                  <style>{`
+                    @keyframes pulseMic {
+                      0%, 100% { transform: scale(1); opacity: 1; }
+                      50% { transform: scale(1.2); opacity: 0.7; }
+                    }
+                  `}</style>
+
+                  <button 
+                    onClick={() => handleSendChat()}
+                    style={{ background: 'none', border: 'none', color: 'var(--primary)', paddingRight: '1rem', cursor: 'pointer', display: 'flex', alignItems: 'center' }}
+                  >
+                    <Send size={16} />
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
+        ) : null}
+
+        {/* Chat Toggle Bubble Button */}
+        <button 
+          onClick={() => setChatOpen(!chatOpen)}
+          className="btn btn-primary glow-primary" 
+          style={{ 
+            width: '56px', 
+            height: '56px', 
+            borderRadius: '50%', 
+            justifyContent: 'center', 
+            boxShadow: '0 8px 24px rgba(59, 130, 246, 0.4)',
+            padding: 0
+          }}
+        >
+          <MessageSquare size={24} />
+        </button>
+      </div>
+    </div>
+  );
+}
