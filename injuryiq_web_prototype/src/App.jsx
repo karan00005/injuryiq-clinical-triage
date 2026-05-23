@@ -3087,7 +3087,7 @@ CRITICAL:
             )}
 
             {/* Bottom Wizard Controls */}
-            <div className="wizard-bottom-controls">
+            <div className="wizard-bottom-controls" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%', marginTop: '2.5rem', gap: '1rem' }}>
               <button 
                 type="button"
                 className="btn btn-secondary"
