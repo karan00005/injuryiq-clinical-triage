@@ -69,3 +69,12 @@ class AssessmentResponse(BaseModel):
     imageUrl: Optional[str] = None
     comparisonImageUrl: Optional[str] = None
     createdAt: str
+
+class RegisterNotifyRequest(BaseModel):
+    email: str
+    name: str
+
+class RegisterNotifyResponse(BaseModel):
+    success: bool
+    message: str
+    domain_verified: bool

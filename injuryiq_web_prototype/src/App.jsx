@@ -477,7 +477,7 @@ export default function App() {
   const [authError, setAuthError] = useState('');
   const [isAuthLoading, setIsAuthLoading] = useState(false);
 
-  const handleAuthSubmit = () => {
+  const handleAuthSubmit = async () => {
     const emailVal = authEmail.trim();
     const passwordVal = authPassword;
     const nameVal = authName.trim();
@@ -499,11 +499,12 @@ export default function App() {
     setIsAuthLoading(true);
     setAuthError('');
 
-    setTimeout(() => {
-      const usersKey = 'injuryiq_users';
-      const localUsers = JSON.parse(localStorage.getItem(usersKey) || '[]');
-
-      if (currentMode === 'signup') {
+    if (currentMode === 'signup') {
+      try {
+        const usersKey = 'injuryiq_users';
+        const localUsers = JSON.parse(localStorage.getItem(usersKey) || '[]');
+        
+        // 1. Local existence check
         const exists = localUsers.some(u => u.email.toLowerCase() === emailVal.toLowerCase());
         if (exists) {
           setAuthError(lang === 'hi' ? 'इस ईमेल के साथ पहले से ही एक खाता है।' : 'An account with this email already exists.');
@@ -511,6 +512,26 @@ export default function App() {
           return;
         }
 
+        // 2. Real-time domain resolution & email notification API call
+        const response = await fetch('http://localhost:8000/api/v1/auth/register-notify', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            email: emailVal,
+            name: nameVal
+          })
+        });
+
+        if (!response.ok) {
+          const errData = await response.json();
+          setAuthError(errData.detail || 'Email domain verification failed.');
+          setIsAuthLoading(false);
+          return;
+        }
+
+        // 3. Save new user locally on successful verification
         const newUser = {
           email: emailVal.toLowerCase(),
           password: passwordVal,
@@ -520,12 +541,21 @@ export default function App() {
         localUsers.push(newUser);
         localStorage.setItem(usersKey, JSON.stringify(localUsers));
         
-        // Show success alert and switch back to login mode
         setAuthMode('login');
         setAuthPassword('');
         setAuthError('');
-        alert("Registration successful! Please login with your email and password.");
-      } else {
+        alert("Registration successful! Welcome email has been processed successfully. Please login.");
+      } catch (err) {
+        console.error("Backend connection error:", err);
+        setAuthError(lang === 'hi' ? 'सर्वर कनेक्शन विफल रहा। कृपया जाँचें कि बैकएंड ऑनलाइन है।' : 'Server connection failed. Please ensure the backend is online.');
+      } finally {
+        setIsAuthLoading(false);
+      }
+    } else {
+      // Local Login flow as before
+      setTimeout(() => {
+        const usersKey = 'injuryiq_users';
+        const localUsers = JSON.parse(localStorage.getItem(usersKey) || '[]');
         const matchedUser = localUsers.find(u => u.email.toLowerCase() === emailVal.toLowerCase() && u.password === passwordVal);
         if (!matchedUser) {
           setAuthError(lang === 'hi' ? 'अमान्य ईमेल या पासवर्ड।' : 'Invalid email or password.');
@@ -537,13 +567,12 @@ export default function App() {
         localStorage.setItem('injuryiq_current_user', JSON.stringify(sessionUser));
         setCurrentUser(sessionUser);
         
-        // Reset auth form fields on successful login
         setAuthEmail('');
         setAuthPassword('');
         setAuthName('');
-      }
-      setIsAuthLoading(false);
-    }, 800);
+        setIsAuthLoading(false);
+      }, 800);
+    }
   };
 
   const handleGoogleSignIn = () => {
