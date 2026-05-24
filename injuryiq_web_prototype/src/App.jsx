@@ -878,11 +878,12 @@ export default function App() {
     setGoogleAuthLoading(true);
     setAuthError('');
     const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'http://127.0.0.1:8000';
+    let fbUser = null;
     try {
       // Step 1: Authenticate with Google via Firebase popup
       const firebaseModule = await import('./firebase');
       const result = await firebaseModule.signInWithPopup(firebaseModule.auth, firebaseModule.googleProvider);
-      const fbUser = result.user;
+      fbUser = result.user;
       const emailVal = fbUser.email.toLowerCase();
       const nameVal = fbUser.displayName || fbUser.email.split('@')[0];
       const pictureVal = fbUser.photoURL || '';
@@ -904,26 +905,31 @@ export default function App() {
         localStorage.setItem('injuryiq_current_user', JSON.stringify(sessionUser));
         setCurrentUser(sessionUser);
       } else {
-        setAuthError(data.detail || 'Google Sign-In failed. Please try again.');
+        setAuthError(data.detail || 'Google Sign-In failed on backend.');
       }
     } catch (err) {
-      if (err.code !== 'auth/popup-closed-by-user' && err.code !== 'auth/cancelled-popup-request') {
-        // Backend unreachable — fallback: allow Google sign-in using Firebase token as source of truth
-        console.warn('[Google Auth Fallback] Backend unreachable, using Firebase user directly.');
-        try {
-          const firebaseModule = await import('./firebase');
-          const result = await firebaseModule.signInWithPopup(firebaseModule.auth, firebaseModule.googleProvider);
-          const fbUser = result.user;
-          const sessionUser = {
-            email: fbUser.email.toLowerCase(),
-            name: fbUser.displayName || fbUser.email.split('@')[0],
-            picture: fbUser.photoURL || ''
-          };
-          localStorage.setItem('injuryiq_current_user', JSON.stringify(sessionUser));
-          setCurrentUser(sessionUser);
-        } catch (fbErr) {
-          setAuthError('Google Sign-In failed. Please try again.');
-          console.error('Firebase error:', fbErr);
+      console.error('[Google Auth Error] Details:', err);
+      
+      // If we got the user from Firebase popup, but backend fetch failed (e.g. backend offline or mixed content)
+      if (fbUser) {
+        console.warn('[Google Auth Fallback] Backend unreachable, logging in offline with Firebase user directly.');
+        const sessionUser = {
+          email: fbUser.email.toLowerCase(),
+          name: fbUser.displayName || fbUser.email.split('@')[0],
+          picture: fbUser.photoURL || ''
+        };
+        localStorage.setItem('injuryiq_current_user', JSON.stringify(sessionUser));
+        setCurrentUser(sessionUser);
+      } else {
+        // Firebase Popup itself failed
+        if (err.code === 'auth/unauthorized-domain') {
+          setAuthError(
+            lang === 'hi'
+              ? 'गूगल साइन-इन विफल: वर्सेल डोमेन फायरबेस कंसोल में अधिकृत नहीं है। कृपया Firebase -> Auth -> Settings -> Authorized domains में इसे जोड़ें।'
+              : "Google Sign-In failed: This domain is not authorized in Firebase Console. Please add 'injuryiqwebprototype.vercel.app' in Firebase -> Auth -> Settings -> Authorized domains."
+          );
+        } else if (err.code !== 'auth/popup-closed-by-user' && err.code !== 'auth/cancelled-popup-request') {
+          setAuthError(`Google Sign-In failed: ${err.message || 'Please try again.'}`);
         }
       }
     }
