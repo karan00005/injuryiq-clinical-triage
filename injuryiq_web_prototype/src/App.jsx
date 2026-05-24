@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { auth, googleProvider, signInWithPopup } from './firebase';
 
 import { 
   Activity, 
@@ -881,8 +882,7 @@ export default function App() {
     let fbUser = null;
     try {
       // Step 1: Authenticate with Google via Firebase popup
-      const firebaseModule = await import('./firebase');
-      const result = await firebaseModule.signInWithPopup(firebaseModule.auth, firebaseModule.googleProvider);
+      const result = await signInWithPopup(auth, googleProvider);
       fbUser = result.user;
       const emailVal = fbUser.email.toLowerCase();
       const nameVal = fbUser.displayName || fbUser.email.split('@')[0];
