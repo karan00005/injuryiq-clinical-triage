@@ -771,13 +771,23 @@ export default function App() {
         const data = await response.json();
 
         if (response.ok && data.success) {
-          // Signup succeeded — show OTP verification panel
+          // Signup succeeded — auto-login immediately!
+          const sessionUser = { email: data.user.email, name: data.user.name };
+          localStorage.setItem('injuryiq_current_user', JSON.stringify(sessionUser));
+          setCurrentUser(sessionUser);
+
+          // Add to local cache of registered users on this browser
+          const usersKey = 'injuryiq_users';
+          const localUsers = JSON.parse(localStorage.getItem(usersKey) || '[]');
+          if (!localUsers.some(u => u.email.toLowerCase() === emailVal.toLowerCase())) {
+            localUsers.push({ email: emailVal, name: nameVal, password: passwordVal });
+            localStorage.setItem(usersKey, JSON.stringify(localUsers));
+          }
+
+          setAuthEmail('');
+          setAuthPassword('');
+          setAuthName('');
           setIsAuthLoading(false);
-          setOtpEmail(emailVal);
-          setOtpCode('');
-          setOtpError('');
-          setOtpResendMsg('');
-          setOtpMode(true);
           return;
         } else {
           setAuthError(data.detail || 'Registration failed.');
@@ -785,8 +795,29 @@ export default function App() {
           return;
         }
       } catch (networkErr) {
-        console.warn('[AUTH FALLBACK] Backend offline:', networkErr);
-        setAuthError('Cannot connect to server. Please make sure the backend is running.');
+        console.warn('[AUTH FALLBACK] Backend offline, registering locally in offline mode:', networkErr);
+        
+        // Offline registration fallback
+        const usersKey = 'injuryiq_users';
+        const localUsers = JSON.parse(localStorage.getItem(usersKey) || '[]');
+        if (localUsers.some(u => u.email.toLowerCase() === emailVal.toLowerCase())) {
+          setAuthError(lang === 'hi' ? 'इस ईमेल के साथ एक खाता पहले से ही मौजूद है।' : 'An account with this email already exists.');
+          setIsAuthLoading(false);
+          return;
+        }
+
+        const newUser = { email: emailVal, name: nameVal, password: passwordVal };
+        localUsers.push(newUser);
+        localStorage.setItem(usersKey, JSON.stringify(localUsers));
+
+        // Auto-login locally
+        const sessionUser = { email: emailVal, name: nameVal };
+        localStorage.setItem('injuryiq_current_user', JSON.stringify(sessionUser));
+        setCurrentUser(sessionUser);
+
+        setAuthEmail('');
+        setAuthPassword('');
+        setAuthName('');
         setIsAuthLoading(false);
         return;
       }
