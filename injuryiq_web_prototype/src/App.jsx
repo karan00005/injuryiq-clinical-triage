@@ -1145,11 +1145,10 @@ export default function App() {
       setHistory([]);
     }
 
-    // Auto populate the Gemini API key in LocalStorage if not already set or invalid, or if it is the old key
+    // Auto populate the Gemini API key in LocalStorage if not already set or invalid, or if the environment key changed
     const savedKey = localStorage.getItem('injuryiq_gemini_key');
     const defaultKey = import.meta.env.VITE_GEMINI_API_KEY || '';
-    const oldKey = 'AIzaSyDJfX-eXDkoCs5y9GRbI5O88kZZtjgM58Q';
-    if (defaultKey && (!savedKey || savedKey === 'null' || savedKey === 'undefined' || !savedKey.trim() || savedKey === oldKey)) {
+    if (defaultKey && (!savedKey || savedKey === 'null' || savedKey === 'undefined' || !savedKey.trim() || savedKey !== defaultKey)) {
       localStorage.setItem('injuryiq_gemini_key', defaultKey);
       setGeminiKey(defaultKey);
     }
