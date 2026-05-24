@@ -2094,6 +2094,39 @@ Return your response strictly in the following JSON format:
     });
   };
 
+  const checkIsSolidColor = (imageSrc) => {
+    return new Promise((resolve) => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement("canvas");
+        const ctx = canvas.getContext("2d");
+        canvas.width = 50;
+        canvas.height = 50;
+        ctx.drawImage(img, 0, 0, 50, 50);
+        try {
+          const d = ctx.getImageData(0, 0, 50, 50).data;
+          let rSum = 0, gSum = 0, bSum = 0;
+          const total = 50 * 50;
+          for (let i = 0; i < d.length; i += 4) { rSum += d[i]; gSum += d[i+1]; bSum += d[i+2]; }
+          const rAvg = rSum / total, gAvg = gSum / total, bAvg = bSum / total;
+          let uniformPixels = 0;
+          for (let i = 0; i < d.length; i += 4) {
+            if (Math.abs(d[i] - rAvg) < 25 && Math.abs(d[i+1] - gAvg) < 25 && Math.abs(d[i+2] - bAvg) < 25) {
+              uniformPixels++;
+            }
+          }
+          resolve((uniformPixels / total) > 0.80);
+        } catch {
+          resolve(false);
+        }
+      };
+      img.onerror = () => {
+        resolve(false);
+      };
+      img.src = imageSrc;
+    });
+  };
+
   // --- TRIGGER MOCK AI inference ---
   const runAiAnalysis = async () => {
     setIsAnalyzing(true);
@@ -2112,6 +2145,8 @@ Return your response strictly in the following JSON format:
     // Start skin tone checks in background
     const skinPctPromise = injuryPhotoUrl ? detectSkinTonePercentage(injuryPhotoUrl) : Promise.resolve(50);
     const comparisonSkinPctPromise = comparisonPhotoUrl ? detectSkinTonePercentage(comparisonPhotoUrl) : Promise.resolve(50);
+    const injuryIsSolidPromise = injuryPhotoUrl ? checkIsSolidColor(injuryPhotoUrl) : Promise.resolve(false);
+    const comparisonIsSolidPromise = comparisonPhotoUrl ? checkIsSolidColor(comparisonPhotoUrl) : Promise.resolve(false);
 
     const logs = [
       "🔄 Initializing PyTorch computer vision engine...",
@@ -2137,6 +2172,8 @@ Return your response strictly in the following JSON format:
         try {
           const skinPct = await skinPctPromise;
           const comparisonSkinPct = await comparisonSkinPctPromise;
+          const injuryIsSolid = await injuryIsSolidPromise;
+          const comparisonIsSolid = await comparisonIsSolidPromise;
           
           let geminiResult = null;
           if (geminiPromise) {
@@ -2187,30 +2224,7 @@ Return your response strictly in the following JSON format:
           const isComparisonNotBodyPart = comparisonSkinPct < 18.0;
 
           // Additional check: reject solid/uniform color images (e.g. red/blue/green backgrounds)
-          // If >80% of pixels are within a very narrow RGB range, it's likely a fake/wrong image
-          const isSolidColorImage = (imgSrc) => {
-            try {
-              const tempCanvas = document.createElement('canvas');
-              const tempCtx = tempCanvas.getContext('2d');
-              tempCanvas.width = 50;
-              tempCanvas.height = 50;
-              const img2 = new Image();
-              img2.src = imgSrc;
-              tempCtx.drawImage(img2, 0, 0, 50, 50);
-              const d = tempCtx.getImageData(0, 0, 50, 50).data;
-              let rSum = 0, gSum = 0, bSum = 0;
-              const total = 50 * 50;
-              for (let i = 0; i < d.length; i += 4) { rSum += d[i]; gSum += d[i+1]; bSum += d[i+2]; }
-              const rAvg = rSum / total, gAvg = gSum / total, bAvg = bSum / total;
-              let uniformPixels = 0;
-              for (let i = 0; i < d.length; i += 4) {
-                if (Math.abs(d[i] - rAvg) < 25 && Math.abs(d[i+1] - gAvg) < 25 && Math.abs(d[i+2] - bAvg) < 25) {
-                  uniformPixels++;
-                }
-              }
-              return (uniformPixels / total) > 0.80;
-            } catch { return false; }
-          };
+          // Evaluated asynchronously in background checks above
 
           let failed = false;
           let failMsg = "";
@@ -2223,8 +2237,6 @@ Return your response strictly in the following JSON format:
             }
           } else {
             // Fallback to local checks
-            const injuryIsSolid = injuryPhotoUrl ? isSolidColorImage(injuryPhotoUrl) : false;
-            const comparisonIsSolid = comparisonPhotoUrl ? isSolidColorImage(comparisonPhotoUrl) : false;
             if (injuryIsSolid) {
               failed = true;
               failMsg = `❌ Image validation failed: The injury photo appears to be a solid color image (not a clinical photo). Please upload a real photo of your ${selectedJoint}.`;
@@ -2243,7 +2255,6 @@ Return your response strictly in the following JSON format:
             } else if (jointMismatch) {
               failed = true;
               failMsg = `❌ Image validation failed: ${mismatchDetail}. Selected area is '${selectedJoint.toUpperCase()}', but the photo matches another body joint.`;
-
             }
           }
           
