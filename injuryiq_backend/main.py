@@ -1,19 +1,118 @@
 import uuid
 import os
 import re
+import json
+import random
 import socket
 import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
-from datetime import datetime
+from datetime import datetime, timedelta
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from schemas import AssessmentRequest, AssessmentResponse, RegisterNotifyRequest, RegisterNotifyResponse, UserRegisterRequest, UserLoginRequest, AuthResponse
+from schemas import (
+    AssessmentRequest, AssessmentResponse,
+    RegisterNotifyRequest, RegisterNotifyResponse,
+    UserRegisterRequest, UserLoginRequest, AuthResponse,
+    GoogleAuthRequest, OtpVerifyRequest, OtpResendRequest
+)
 from rules import calculate_triage_score
 from config import db, firebase_initialized
 
-# Persistent server-side in-memory user database for mock authentication fallback
-MOCK_USERS_DB = []
+# ─────────────────────────────────────────────
+# PERSISTENT JSON FILE DATABASE (fallback when Firestore is unavailable)
+# Data survives server restarts — stored in users_db.json
+# ─────────────────────────────────────────────
+USERS_DB_FILE = os.path.join(os.path.dirname(__file__), "users_db.json")
+
+def load_users_db() -> list:
+    """Load users from persistent JSON file. Returns empty list if file not found."""
+    try:
+        if os.path.exists(USERS_DB_FILE):
+            with open(USERS_DB_FILE, "r", encoding="utf-8") as f:
+                return json.load(f)
+    except Exception as e:
+        print(f"[DB ERROR] Could not load users_db.json: {e}")
+    return []
+
+def save_users_db(users: list) -> bool:
+    """Save users list to persistent JSON file."""
+    try:
+        with open(USERS_DB_FILE, "w", encoding="utf-8") as f:
+            json.dump(users, f, ensure_ascii=False, indent=2)
+        return True
+    except Exception as e:
+        print(f"[DB ERROR] Could not save users_db.json: {e}")
+        return False
+
+def find_user(email: str) -> dict | None:
+    """Find a user by email in the persistent DB (or Firestore if available)."""
+    if firebase_initialized and db is not None:
+        try:
+            doc = db.collection("users").document(email).get()
+            if doc.exists:
+                return doc.to_dict()
+        except Exception as e:
+            print(f"[DB ERROR] Firestore find_user failed: {e}")
+    users = load_users_db()
+    return next((u for u in users if u["email"] == email), None)
+
+def upsert_user(user: dict) -> bool:
+    """Insert or update a user in the persistent DB (or Firestore)."""
+    email = user["email"]
+    if firebase_initialized and db is not None:
+        try:
+            db.collection("users").document(email).set(user)
+            print(f"[DB] Saved user '{email}' to Firestore.")
+            return True
+        except Exception as e:
+            print(f"[DB ERROR] Firestore upsert failed: {e}")
+    # Fallback: JSON file
+    users = load_users_db()
+    existing_idx = next((i for i, u in enumerate(users) if u["email"] == email), None)
+    if existing_idx is not None:
+        users[existing_idx] = user
+    else:
+        users.append(user)
+    result = save_users_db(users)
+    if result:
+        print(f"[DB] Saved user '{email}' to users_db.json.")
+    return result
+
+# ─────────────────────────────────────────────
+# OTP STORE — in-memory, per-process (sufficient for college demo)
+# Format: { email: { code: "123456", expires_at: datetime, attempts: int } }
+# ─────────────────────────────────────────────
+OTP_STORE: dict = {}
+OTP_EXPIRY_MINUTES = int(os.getenv("OTP_EXPIRY_MINUTES", "10"))
+
+def generate_otp() -> str:
+    """Generate a secure 6-digit OTP."""
+    return str(random.randint(100000, 999999))
+
+def store_otp(email: str, code: str):
+    OTP_STORE[email] = {
+        "code": code,
+        "expires_at": datetime.utcnow() + timedelta(minutes=OTP_EXPIRY_MINUTES),
+        "attempts": 0
+    }
+
+def validate_otp(email: str, code: str) -> tuple[bool, str]:
+    """Validate OTP. Returns (is_valid, error_message)."""
+    entry = OTP_STORE.get(email)
+    if not entry:
+        return False, "No OTP found for this email. Please request a new OTP."
+    if datetime.utcnow() > entry["expires_at"]:
+        del OTP_STORE[email]
+        return False, f"OTP has expired (valid for {OTP_EXPIRY_MINUTES} minutes). Please request a new one."
+    entry["attempts"] += 1
+    if entry["attempts"] > 5:
+        del OTP_STORE[email]
+        return False, "Too many incorrect attempts. Please request a new OTP."
+    if entry["code"] != code.strip():
+        return False, f"Incorrect OTP. {5 - entry['attempts'] + 1} attempt(s) remaining."
+    del OTP_STORE[email]
+    return True, "OTP verified successfully."
 
 def verify_email_domain(email: str) -> bool:
     # 1. Regex syntax check
@@ -189,7 +288,81 @@ def send_welcome_email(email: str, name: str) -> bool:
         print(f"[SMTP ERROR] Failed sending real welcome email: {e}. Falling back to simulation.")
         return False
 
-# --- PHASE 5: PYTORCH ML MODEL LOADING PIPELINE (LAZY INITIALIZED) ---
+
+def send_otp_email(email: str, name: str, otp_code: str) -> bool:
+    """Send OTP verification email. Falls back to console print in demo mode."""
+    smtp_server = os.getenv("SMTP_SERVER", "")
+    smtp_port = int(os.getenv("SMTP_PORT", "587"))
+    smtp_username = os.getenv("SMTP_USERNAME", "")
+    smtp_password = os.getenv("SMTP_PASSWORD", "")
+
+    subject = "InjuryIQ AI — Email Verification OTP"
+    html_content = f"""<!DOCTYPE html>
+<html>
+<head><meta charset="utf-8"><title>Verify Your Email</title>
+<style>
+  body {{ font-family: 'Segoe UI', Arial, sans-serif; background: #0f172a; margin: 0; padding: 20px; }}
+  .card {{ max-width: 480px; margin: 0 auto; background: #1e293b; border-radius: 16px; overflow: hidden; border: 1px solid rgba(99,102,241,0.3); }}
+  .header {{ background: linear-gradient(135deg, #6366f1, #4f46e5); padding: 28px 32px; text-align: center; }}
+  .header h1 {{ margin: 0; color: #fff; font-size: 22px; font-weight: 700; letter-spacing: 1px; }}
+  .header p {{ margin: 4px 0 0; color: rgba(255,255,255,0.8); font-size: 13px; }}
+  .body {{ padding: 32px; color: #cbd5e1; line-height: 1.6; }}
+  .otp-box {{ background: #0f172a; border: 2px dashed #6366f1; border-radius: 12px; text-align: center; padding: 20px; margin: 24px 0; }}
+  .otp-code {{ font-size: 40px; font-weight: 800; letter-spacing: 12px; color: #a5b4fc; font-family: monospace; }}
+  .expiry {{ font-size: 12px; color: #64748b; margin-top: 8px; }}
+  .footer {{ background: #0f172a; padding: 16px 32px; text-align: center; color: #475569; font-size: 12px; }}
+  .warning {{ background: rgba(239,68,68,0.1); border-left: 3px solid #ef4444; padding: 12px 16px; border-radius: 4px; font-size: 13px; color: #fca5a5; margin-top: 16px; }}
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="header">
+    <h1>🏥 InjuryIQ AI</h1>
+    <p>Email Verification Required</p>
+  </div>
+  <div class="body">
+    <p>Hi <strong style="color:#e2e8f0">{name}</strong>,</p>
+    <p>Thank you for registering with InjuryIQ AI. Use the OTP below to verify your email address and activate your account:</p>
+    <div class="otp-box">
+      <div class="otp-code">{otp_code}</div>
+      <div class="expiry">⏱ Valid for {OTP_EXPIRY_MINUTES} minutes only</div>
+    </div>
+    <p>Enter this code on the verification screen to complete your registration.</p>
+    <div class="warning">⚠️ Do not share this OTP with anyone. InjuryIQ AI will never ask for your OTP via phone or chat.</div>
+  </div>
+  <div class="footer">© 2026 InjuryIQ AI · Educational Clinical Decision Support System</div>
+</div>
+</body>
+</html>"""
+
+    if not smtp_server or not smtp_username or not smtp_password:
+        # Demo mode: print to console
+        print("\n" + "="*70)
+        print(f"[OTP EMAIL - DEMO MODE] To: {email} ({name})")
+        print(f"  Subject: {subject}")
+        print(f"  ★ OTP CODE: {otp_code}  (expires in {OTP_EXPIRY_MINUTES} min)")
+        print("="*70 + "\n")
+        return True
+
+    try:
+        msg = MIMEMultipart("alternative")
+        msg["Subject"] = subject
+        msg["From"] = f"InjuryIQ AI <{smtp_username}>"
+        msg["To"] = email
+        msg.attach(MIMEText(html_content, "html"))
+        server = smtplib.SMTP(smtp_server, smtp_port)
+        server.starttls()
+        server.login(smtp_username, smtp_password)
+        server.sendmail(smtp_username, email, msg.as_string())
+        server.quit()
+        print(f"[OTP EMAIL] Sent OTP to {email}")
+        return True
+    except Exception as e:
+        print(f"[OTP EMAIL ERROR] Failed: {e}. OTP for {email}: {otp_code}")
+        return False
+
+
+
 pytorch_initialized = False
 pytorch_available = False
 model_state = None
@@ -531,87 +704,148 @@ async def auth_signup(request: UserRegisterRequest):
     email = request.email.strip().lower()
     password = request.password
     name = request.name.strip()
-    
-    if firebase_initialized and db is not None:
-        try:
-            # Check if user exists in Firestore
-            user_ref = db.collection("users").document(email)
-            user_doc = user_ref.get()
-            if user_doc.exists:
-                raise HTTPException(status_code=400, detail="Account with this email already exists in Firestore database. Please login.")
-            
-            # Save user in Firestore
-            user_data = {
-                "email": email,
-                "password": password, # In production, hash this (using bcrypt). For college demo/mock, plain text is standard.
-                "name": name,
-                "createdAt": datetime.utcnow().isoformat()
-            }
-            user_ref.set(user_data)
-            return AuthResponse(success=True, message="Registration successful in Firestore database!", user={"email": email, "name": name})
-        except HTTPException as he:
-            raise he
-        except Exception as e:
-            print(f"[AUTH ERROR] Firestore registration failed: {e}")
-            # Fallback to mock in-memory database on exception
-    
-    # Fallback / Mock Database Flow
-    global MOCK_USERS_DB
-    exists = any(u["email"] == email for u in MOCK_USERS_DB)
-    if exists:
-        raise HTTPException(status_code=400, detail="Account with this email already exists. Please login.")
-        
+
+    # Check if user already exists (Firestore or JSON file)
+    existing = find_user(email)
+    if existing:
+        raise HTTPException(status_code=400, detail="An account with this email already exists. Please login instead.")
+
+    # Create user record (unverified until OTP confirmed)
     new_user = {
         "email": email,
         "password": password,
         "name": name,
+        "is_verified": False,
+        "auth_provider": "email",
         "createdAt": datetime.utcnow().isoformat()
     }
-    MOCK_USERS_DB.append(new_user)
-    print(f"[AI AUTH MOCK] Registered user: {email} in server-side in-memory mock database.")
-    return AuthResponse(success=True, message="Registration successful in server-side mock database!", user={"email": email, "name": name})
+    upsert_user(new_user)
+    print(f"[AUTH] New user registered (unverified): {email}")
+
+    # Generate and send OTP
+    otp_code = generate_otp()
+    store_otp(email, otp_code)
+    send_otp_email(email, name, otp_code)
+
+    return AuthResponse(
+        success=True,
+        otp_required=True,
+        message=f"Registration successful! Please verify your email. An OTP has been sent to {email}.",
+        user={"email": email, "name": name}
+    )
+
+
+@app.post("/api/v1/auth/verify-otp", response_model=AuthResponse)
+async def verify_otp(request: OtpVerifyRequest):
+    email = request.email.strip().lower()
+    code = request.otp.strip()
+
+    is_valid, message = validate_otp(email, code)
+    if not is_valid:
+        raise HTTPException(status_code=400, detail=message)
+
+    # Mark user as verified
+    user = find_user(email)
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found. Please register again.")
+    user["is_verified"] = True
+    upsert_user(user)
+    print(f"[AUTH] Email verified for user: {email}")
+
+    return AuthResponse(
+        success=True,
+        message="Email verified successfully! You are now logged in.",
+        user={"email": user["email"], "name": user["name"]}
+    )
+
+
+@app.post("/api/v1/auth/resend-otp", response_model=AuthResponse)
+async def resend_otp(request: OtpResendRequest):
+    email = request.email.strip().lower()
+
+    user = find_user(email)
+    if not user:
+        raise HTTPException(status_code=404, detail="No account found with this email.")
+    if user.get("is_verified", False):
+        raise HTTPException(status_code=400, detail="This account is already verified. Please login.")
+
+    # Regenerate and resend OTP
+    otp_code = generate_otp()
+    store_otp(email, otp_code)
+    send_otp_email(email, user["name"], otp_code)
+    print(f"[AUTH] OTP resent for: {email}")
+
+    return AuthResponse(
+        success=True,
+        message=f"A new OTP has been sent to {email}. It expires in {OTP_EXPIRY_MINUTES} minutes."
+    )
+
+
+@app.post("/api/v1/auth/google", response_model=AuthResponse)
+async def google_auth(request: GoogleAuthRequest):
+    """Unified Google OAuth endpoint — registers new users or logs in existing ones."""
+    email = request.email.strip().lower()
+    name = request.name.strip() or email.split("@")[0]
+    picture = request.picture or ""
+
+    existing = find_user(email)
+    if existing:
+        # Existing user — log them in regardless of auth_provider
+        print(f"[AUTH] Google sign-in for existing user: {email}")
+        return AuthResponse(
+            success=True,
+            message="Google login successful!",
+            user={"email": existing["email"], "name": existing["name"], "picture": picture}
+        )
+
+    # New user — auto-register (Google accounts are pre-verified by Google)
+    new_user = {
+        "email": email,
+        "password": "__google__",
+        "name": name,
+        "picture": picture,
+        "is_verified": True,  # Google accounts don't need OTP — already verified by Google
+        "auth_provider": "google",
+        "createdAt": datetime.utcnow().isoformat()
+    }
+    upsert_user(new_user)
+    print(f"[AUTH] New Google user registered: {email}")
+
+    return AuthResponse(
+        success=True,
+        message="Google account registered and logged in successfully!",
+        user={"email": email, "name": name, "picture": picture}
+    )
+
 
 @app.post("/api/v1/auth/login", response_model=AuthResponse)
 async def auth_login(request: UserLoginRequest):
     email = request.email.strip().lower()
     password = request.password
-    
-    if firebase_initialized and db is not None:
-        try:
-            # Check user in Firestore
-            user_doc = db.collection("users").document(email).get()
-            if user_doc.exists:
-                user_data = user_doc.to_dict()
-                if user_data.get("password") == password:
-                    return AuthResponse(
-                        success=True, 
-                        message="Login successful from Firestore database!", 
-                        user={"email": user_data["email"], "name": user_data["name"]}
-                    )
-            raise HTTPException(status_code=400, detail="Invalid email or password.")
-        except HTTPException as he:
-            raise he
-        except Exception as e:
-            print(f"[AUTH ERROR] Firestore login lookup failed: {e}")
-            # Fallback to mock in-memory database on exception
-            
-    # Fallback / Mock Database Flow
-    global MOCK_USERS_DB
-    matched = next((u for u in MOCK_USERS_DB if u["email"] == email and u["password"] == password), None)
-    if matched:
-        return AuthResponse(
-            success=True, 
-            message="Login successful from server-side mock database!", 
-            user={"email": matched["email"], "name": matched["name"]}
+
+    user = find_user(email)
+    if not user:
+        raise HTTPException(status_code=400, detail="Invalid email or password. Please check your credentials.")
+
+    if user.get("password") != password:
+        raise HTTPException(status_code=400, detail="Invalid email or password. Please check your credentials.")
+
+    if not user.get("is_verified", False):
+        # Re-send OTP for convenience
+        otp_code = generate_otp()
+        store_otp(email, otp_code)
+        send_otp_email(email, user["name"], otp_code)
+        raise HTTPException(
+            status_code=403,
+            detail=f"Your email is not verified yet. A new OTP has been sent to {email}. Please verify first."
         )
-    
-    # Auto-registration fallback for testing convenience!
-    if email == "demo@injuryiq.com" or email == "test@test.com":
-        auto_user = {"email": email, "password": password, "name": "Demo User"}
-        MOCK_USERS_DB.append(auto_user)
-        return AuthResponse(success=True, message="Demo auto-login successful!", user={"email": email, "name": "Demo User"})
-        
-    raise HTTPException(status_code=400, detail="Invalid email or password.")
+
+    print(f"[AUTH] Login successful: {email}")
+    return AuthResponse(
+        success=True,
+        message="Login successful!",
+        user={"email": user["email"], "name": user["name"]}
+    )
 
 @app.post("/api/v1/assess", response_model=AssessmentResponse)
 async def create_assessment(request: AssessmentRequest):

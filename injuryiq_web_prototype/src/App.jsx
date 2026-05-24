@@ -728,6 +728,14 @@ export default function App() {
   const [authError, setAuthError] = useState('');
   const [isAuthLoading, setIsAuthLoading] = useState(false);
   const [googleAuthLoading, setGoogleAuthLoading] = useState(false);
+  // OTP verification states
+  const [otpMode, setOtpMode] = useState(false);
+  const [otpEmail, setOtpEmail] = useState('');
+  const [otpCode, setOtpCode] = useState('');
+  const [otpLoading, setOtpLoading] = useState(false);
+  const [otpError, setOtpError] = useState('');
+  const [otpResendLoading, setOtpResendLoading] = useState(false);
+  const [otpResendMsg, setOtpResendMsg] = useState('');
 
   const handleAuthSubmit = async () => {
     const emailVal = authEmail.trim();
@@ -751,33 +759,25 @@ export default function App() {
     setIsAuthLoading(true);
     setAuthError('');
 
-    const BACKEND_URL = "http://127.0.0.1:8000";
+    const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || "http://127.0.0.1:8000";
 
     if (currentMode === 'signup') {
       try {
-        // 1. Try server-side registration
         const response = await fetch(`${BACKEND_URL}/api/v1/auth/signup`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ email: emailVal, password: passwordVal, name: nameVal })
         });
-        
         const data = await response.json();
-        
-        if (response.status === 200 && data.success) {
-          // Sync locally to cache
-          const usersKey = 'injuryiq_users';
-          const localUsers = JSON.parse(localStorage.getItem(usersKey) || '[]');
-          if (!localUsers.some(u => u.email.toLowerCase() === emailVal.toLowerCase())) {
-            localUsers.push({ email: emailVal.toLowerCase(), password: passwordVal, name: nameVal });
-            localStorage.setItem(usersKey, JSON.stringify(localUsers));
-          }
-          
-          setAuthMode('login');
-          setAuthPassword('');
-          setAuthError('');
+
+        if (response.ok && data.success) {
+          // Signup succeeded — show OTP verification panel
           setIsAuthLoading(false);
-          alert(lang === 'hi' ? `✅ ${nameVal} — रजिस्ट्रेशन सफल (डेटाबेस)! अब लॉगिन करें।` : `✅ Registration successful (stored in database)! Welcome ${nameVal}. Please login now.`);
+          setOtpEmail(emailVal);
+          setOtpCode('');
+          setOtpError('');
+          setOtpResendMsg('');
+          setOtpMode(true);
           return;
         } else {
           setAuthError(data.detail || 'Registration failed.');
@@ -785,26 +785,10 @@ export default function App() {
           return;
         }
       } catch (networkErr) {
-        console.warn("[AUTH FALLBACK] Backend offline, falling back to local storage registry:", networkErr);
-        // Resilient Offline Local Fallback Flow
-        const usersKey = 'injuryiq_users';
-        const localUsers = JSON.parse(localStorage.getItem(usersKey) || '[]');
-        const exists = localUsers.some(u => u.email.toLowerCase() === emailVal.toLowerCase());
-        if (exists) {
-          setAuthError(lang === 'hi' ? 'इस ईमेल से पहले से खाता बना हुआ है।' : 'An account with this email already exists.');
-          setIsAuthLoading(false);
-          return;
-        }
-        
-        const newUser = { email: emailVal.toLowerCase(), password: passwordVal, name: nameVal };
-        localUsers.push(newUser);
-        localStorage.setItem(usersKey, JSON.stringify(localUsers));
-        
-        setAuthMode('login');
-        setAuthPassword('');
-        setAuthError('');
+        console.warn('[AUTH FALLBACK] Backend offline:', networkErr);
+        setAuthError('Cannot connect to server. Please make sure the backend is running.');
         setIsAuthLoading(false);
-        alert(lang === 'hi' ? `✅ ${nameVal} — रजिस्ट्रेशन सफल (ऑफ़लाइन)! अब लॉगिन करें।` : `✅ Registration successful (offline backup)! Welcome ${nameVal}. Please login now.`);
+        return;
       }
     } else {
       // Login Mode
@@ -858,12 +842,13 @@ export default function App() {
     }
   };
 
-  // --- FIREBASE GOOGLE SIGN-IN (lazy loaded to prevent crash) ---
+  // --- FIREBASE GOOGLE SIGN-IN (fixed: calls backend unified endpoint, no localStorage check) ---
   const handleGoogleSignIn = async () => {
     setGoogleAuthLoading(true);
     setAuthError('');
+    const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'http://127.0.0.1:8000';
     try {
-      // Load Firebase only when needed — prevents blank screen on startup
+      // Step 1: Authenticate with Google via Firebase popup
       const firebaseModule = await import('./firebase');
       const result = await firebaseModule.signInWithPopup(firebaseModule.auth, firebaseModule.googleProvider);
       const fbUser = result.user;
@@ -871,39 +856,101 @@ export default function App() {
       const nameVal = fbUser.displayName || fbUser.email.split('@')[0];
       const pictureVal = fbUser.photoURL || '';
 
-      const usersKey = 'injuryiq_users';
-      const localUsers = JSON.parse(localStorage.getItem(usersKey) || '[]');
-      const existingUser = localUsers.find(u => u.email === emailVal);
+      // Step 2: Register/login via backend (unified persistent store — works on all browsers)
+      const response = await fetch(`${BACKEND_URL}/api/v1/auth/google`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: emailVal, name: nameVal, picture: pictureVal })
+      });
+      const data = await response.json();
 
-      if (authMode === 'login') {
-        if (!existingUser) {
-          setAuthError(emailVal + ' is not registered. Please Sign Up first.');
-          setGoogleAuthLoading(false);
-          return;
-        }
-        const sessionUser = { email: existingUser.email, name: existingUser.name, picture: pictureVal };
+      if (response.ok && data.success) {
+        const sessionUser = {
+          email: data.user.email,
+          name: data.user.name,
+          picture: data.user.picture || pictureVal
+        };
         localStorage.setItem('injuryiq_current_user', JSON.stringify(sessionUser));
         setCurrentUser(sessionUser);
       } else {
-        if (existingUser) {
-          setAuthError(emailVal + ' already registered. Please Login instead.');
-          setGoogleAuthLoading(false);
-          return;
-        }
-        const newUser = { email: emailVal, password: '__google__', name: nameVal, picture: pictureVal };
-        localUsers.push(newUser);
-        localStorage.setItem(usersKey, JSON.stringify(localUsers));
-        const sessionUser = { email: emailVal, name: nameVal, picture: pictureVal };
-        localStorage.setItem('injuryiq_current_user', JSON.stringify(sessionUser));
-        setCurrentUser(sessionUser);
+        setAuthError(data.detail || 'Google Sign-In failed. Please try again.');
       }
     } catch (err) {
       if (err.code !== 'auth/popup-closed-by-user' && err.code !== 'auth/cancelled-popup-request') {
-        setAuthError('Google Sign-In failed. Please try again.');
-        console.error('Firebase error:', err);
+        // Backend unreachable — fallback: allow Google sign-in using Firebase token as source of truth
+        console.warn('[Google Auth Fallback] Backend unreachable, using Firebase user directly.');
+        try {
+          const firebaseModule = await import('./firebase');
+          const result = await firebaseModule.signInWithPopup(firebaseModule.auth, firebaseModule.googleProvider);
+          const fbUser = result.user;
+          const sessionUser = {
+            email: fbUser.email.toLowerCase(),
+            name: fbUser.displayName || fbUser.email.split('@')[0],
+            picture: fbUser.photoURL || ''
+          };
+          localStorage.setItem('injuryiq_current_user', JSON.stringify(sessionUser));
+          setCurrentUser(sessionUser);
+        } catch (fbErr) {
+          setAuthError('Google Sign-In failed. Please try again.');
+          console.error('Firebase error:', fbErr);
+        }
       }
     }
     setGoogleAuthLoading(false);
+  };
+
+  // --- OTP VERIFICATION HANDLERS ---
+  const handleOtpVerify = async () => {
+    const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'http://127.0.0.1:8000';
+    if (!otpCode.trim() || otpCode.trim().length !== 6) {
+      setOtpError('Please enter the 6-digit OTP code.');
+      return;
+    }
+    setOtpLoading(true);
+    setOtpError('');
+    try {
+      const response = await fetch(`${BACKEND_URL}/api/v1/auth/verify-otp`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: otpEmail, otp: otpCode.trim() })
+      });
+      const data = await response.json();
+      if (response.ok && data.success) {
+        // Auto-login after verification
+        const sessionUser = { email: data.user.email, name: data.user.name };
+        localStorage.setItem('injuryiq_current_user', JSON.stringify(sessionUser));
+        setOtpMode(false);
+        setCurrentUser(sessionUser);
+      } else {
+        setOtpError(data.detail || 'Invalid OTP. Please try again.');
+      }
+    } catch (err) {
+      setOtpError('Network error. Please try again.');
+    }
+    setOtpLoading(false);
+  };
+
+  const handleOtpResend = async () => {
+    const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'http://127.0.0.1:8000';
+    setOtpResendLoading(true);
+    setOtpResendMsg('');
+    setOtpError('');
+    try {
+      const response = await fetch(`${BACKEND_URL}/api/v1/auth/resend-otp`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: otpEmail })
+      });
+      const data = await response.json();
+      if (response.ok && data.success) {
+        setOtpResendMsg('✅ New OTP sent! Check your email (or backend console in demo mode).');
+      } else {
+        setOtpError(data.detail || 'Failed to resend OTP.');
+      }
+    } catch (err) {
+      setOtpError('Network error. Please try again.');
+    }
+    setOtpResendLoading(false);
   };
 
   const handleLogout = () => {
@@ -2099,9 +2146,35 @@ Return your response strictly in the following JSON format:
           }
 
           // Evaluate validations
-          const isNotBodyPart = skinPct < 12.0;
-          const isComparisonNotBodyPart = comparisonSkinPct < 12.0;
-          
+          const isNotBodyPart = skinPct < 18.0;
+          const isComparisonNotBodyPart = comparisonSkinPct < 18.0;
+
+          // Additional check: reject solid/uniform color images (e.g. red/blue/green backgrounds)
+          // If >80% of pixels are within a very narrow RGB range, it's likely a fake/wrong image
+          const isSolidColorImage = (imgSrc) => {
+            try {
+              const tempCanvas = document.createElement('canvas');
+              const tempCtx = tempCanvas.getContext('2d');
+              tempCanvas.width = 50;
+              tempCanvas.height = 50;
+              const img2 = new Image();
+              img2.src = imgSrc;
+              tempCtx.drawImage(img2, 0, 0, 50, 50);
+              const d = tempCtx.getImageData(0, 0, 50, 50).data;
+              let rSum = 0, gSum = 0, bSum = 0;
+              const total = 50 * 50;
+              for (let i = 0; i < d.length; i += 4) { rSum += d[i]; gSum += d[i+1]; bSum += d[i+2]; }
+              const rAvg = rSum / total, gAvg = gSum / total, bAvg = bSum / total;
+              let uniformPixels = 0;
+              for (let i = 0; i < d.length; i += 4) {
+                if (Math.abs(d[i] - rAvg) < 25 && Math.abs(d[i+1] - gAvg) < 25 && Math.abs(d[i+2] - bAvg) < 25) {
+                  uniformPixels++;
+                }
+              }
+              return (uniformPixels / total) > 0.80;
+            } catch { return false; }
+          };
+
           let failed = false;
           let failMsg = "";
           
@@ -2113,7 +2186,15 @@ Return your response strictly in the following JSON format:
             }
           } else {
             // Fallback to local checks
-            if (isNotBodyPart) {
+            const injuryIsSolid = injuryPhotoUrl ? isSolidColorImage(injuryPhotoUrl) : false;
+            const comparisonIsSolid = comparisonPhotoUrl ? isSolidColorImage(comparisonPhotoUrl) : false;
+            if (injuryIsSolid) {
+              failed = true;
+              failMsg = `❌ Image validation failed: The injury photo appears to be a solid color image (not a clinical photo). Please upload a real photo of your ${selectedJoint}.`;
+            } else if (comparisonIsSolid) {
+              failed = true;
+              failMsg = `❌ Image validation failed: The comparison photo appears to be a solid color image. Please upload a real photo of the uninjured side.`;
+            } else if (isNotBodyPart) {
               failed = true;
               failMsg = `❌ Image validation failed: The uploaded photo does not appear to contain a close-up of a human joint or skin (detected skin area: ${skinPct.toFixed(1)}%). Please upload a clear photo of the selected body part.`;
             } else if (isComparisonNotBodyPart) {
@@ -2125,6 +2206,7 @@ Return your response strictly in the following JSON format:
             } else if (jointMismatch) {
               failed = true;
               failMsg = `❌ Image validation failed: ${mismatchDetail}. Selected area is '${selectedJoint.toUpperCase()}', but the photo matches another body joint.`;
+
             }
           }
           
@@ -2276,8 +2358,95 @@ Return your response strictly in the following JSON format:
           </p>
         </div>
 
-        {/* Login/Signup Glass Card */}
-        <div className="glass-panel" style={{ width: '100%', padding: '2rem', display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+        {/* ─── OTP Verification Panel (shown after signup) ─── */}
+        {otpMode ? (
+          <div className="glass-panel" style={{ width: '100%', padding: '2rem', display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+            {/* Icon + Title */}
+            <div style={{ textAlign: 'center' }}>
+              <div style={{ width: 56, height: 56, borderRadius: '50%', background: 'linear-gradient(135deg,#6366f1,#4f46e5)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 0.75rem' }}>
+                <span style={{ fontSize: 26 }}>📧</span>
+              </div>
+              <h2 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 700 }}>Verify Your Email</h2>
+              <p style={{ margin: '0.5rem 0 0', color: 'var(--text-secondary)', fontSize: '0.85rem' }}>
+                A 6-digit OTP was sent to <strong style={{ color: 'var(--primary)' }}>{otpEmail}</strong>
+              </p>
+              <p style={{ margin: '0.25rem 0 0', color: 'var(--text-secondary)', fontSize: '0.78rem' }}>
+                (Demo mode: check your backend console for the code)
+              </p>
+            </div>
+
+            {/* OTP Input */}
+            <div>
+              <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, marginBottom: '0.4rem', color: 'var(--text-secondary)' }}>Enter OTP Code</label>
+              <input
+                id="otp-input"
+                type="text"
+                inputMode="numeric"
+                maxLength={6}
+                placeholder="123456"
+                value={otpCode}
+                onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, ''))}
+                onKeyDown={(e) => { if (e.key === 'Enter') handleOtpVerify(); }}
+                style={{
+                  width: '100%',
+                  padding: '0.75rem 1rem',
+                  background: 'rgba(255,255,255,0.04)',
+                  border: `2px solid ${otpError ? '#ef4444' : 'var(--border)'}`,
+                  borderRadius: 'var(--radius-sm)',
+                  color: 'inherit',
+                  fontSize: '1.4rem',
+                  letterSpacing: '0.5rem',
+                  textAlign: 'center',
+                  fontFamily: 'monospace',
+                  outline: 'none',
+                  boxSizing: 'border-box'
+                }}
+              />
+            </div>
+
+            {/* Error */}
+            {otpError && (
+              <div style={{ background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)', borderRadius: 'var(--radius-sm)', padding: '0.6rem 0.8rem', color: '#fca5a5', fontSize: '0.82rem' }}>
+                ⚠️ {otpError}
+              </div>
+            )}
+
+            {/* Resend message */}
+            {otpResendMsg && (
+              <div style={{ background: 'rgba(34,197,94,0.1)', border: '1px solid rgba(34,197,94,0.3)', borderRadius: 'var(--radius-sm)', padding: '0.6rem 0.8rem', color: '#86efac', fontSize: '0.82rem' }}>
+                {otpResendMsg}
+              </div>
+            )}
+
+            {/* Verify Button */}
+            <button
+              className="btn btn-primary"
+              style={{ justifyContent: 'center', width: '100%', padding: '0.75rem', fontWeight: 700 }}
+              onClick={handleOtpVerify}
+              disabled={otpLoading}
+            >
+              {otpLoading ? '⏳ Verifying...' : '✅ Verify OTP & Continue'}
+            </button>
+
+            {/* Resend + Back */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.82rem' }}>
+              <button
+                onClick={handleOtpResend}
+                disabled={otpResendLoading}
+                style={{ background: 'none', border: 'none', color: 'var(--primary)', cursor: 'pointer', padding: 0, fontWeight: 600 }}
+              >
+                {otpResendLoading ? 'Sending...' : '🔄 Resend OTP'}
+              </button>
+              <button
+                onClick={() => { setOtpMode(false); setOtpCode(''); setOtpError(''); setOtpResendMsg(''); }}
+                style={{ background: 'none', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer', padding: 0 }}
+              >
+                ← Back to Login
+              </button>
+            </div>
+          </div>
+        ) : (
+          <div className="glass-panel" style={{ width: '100%', padding: '2rem', display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
           {/* Card Top Nav (Lang + Theme) */}
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--border)', paddingBottom: '0.75rem', marginBottom: '0.25rem' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', background: 'rgba(255,255,255,0.05)', padding: '0.3rem 0.6rem', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border)', fontSize: '0.8rem' }}>
@@ -2432,6 +2601,7 @@ Return your response strictly in the following JSON format:
             </button>
           </div>
         </div>
+        )} {/* end of otpMode ternary */}
 
       </div>
     );

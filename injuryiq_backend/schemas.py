@@ -92,3 +92,16 @@ class AuthResponse(BaseModel):
     success: bool
     message: str
     user: Optional[dict] = None
+    otp_required: Optional[bool] = False
+
+class GoogleAuthRequest(BaseModel):
+    email: str
+    name: str
+    picture: Optional[str] = ""
+
+class OtpVerifyRequest(BaseModel):
+    email: str
+    otp: str
+
+class OtpResendRequest(BaseModel):
+    email: str
