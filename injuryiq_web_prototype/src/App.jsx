@@ -772,23 +772,13 @@ export default function App() {
         const data = await response.json();
 
         if (response.ok && data.success) {
-          // Signup succeeded — auto-login immediately!
-          const sessionUser = { email: data.user.email, name: data.user.name };
-          localStorage.setItem('injuryiq_current_user', JSON.stringify(sessionUser));
-          setCurrentUser(sessionUser);
-
-          // Add to local cache of registered users on this browser
-          const usersKey = 'injuryiq_users';
-          const localUsers = JSON.parse(localStorage.getItem(usersKey) || '[]');
-          if (!localUsers.some(u => u.email.toLowerCase() === emailVal.toLowerCase())) {
-            localUsers.push({ email: emailVal, name: nameVal, password: passwordVal });
-            localStorage.setItem(usersKey, JSON.stringify(localUsers));
-          }
-
-          setAuthEmail('');
-          setAuthPassword('');
-          setAuthName('');
+          // Signup succeeded — transition to OTP verification panel
           setIsAuthLoading(false);
+          setOtpEmail(emailVal);
+          setOtpCode('');
+          setOtpError('');
+          setOtpResendMsg('');
+          setOtpMode(true);
           return;
         } else {
           setAuthError(data.detail || 'Registration failed.');
@@ -798,7 +788,7 @@ export default function App() {
       } catch (networkErr) {
         console.warn('[AUTH FALLBACK] Backend offline, registering locally in offline mode:', networkErr);
         
-        // Offline registration fallback
+        // Offline registration fallback (bypass OTP when backend is offline for local testing/fallback robustness)
         const usersKey = 'injuryiq_users';
         const localUsers = JSON.parse(localStorage.getItem(usersKey) || '[]');
         if (localUsers.some(u => u.email.toLowerCase() === emailVal.toLowerCase())) {
@@ -843,6 +833,15 @@ export default function App() {
           setAuthPassword('');
           setAuthName('');
           setIsAuthLoading(false);
+          return;
+        } else if (response.status === 403) {
+          // Account unverified — show OTP verification panel directly
+          setIsAuthLoading(false);
+          setOtpEmail(emailVal);
+          setOtpCode('');
+          setOtpError(data.detail || 'Your email is not verified yet. An OTP has been sent.');
+          setOtpResendMsg('');
+          setOtpMode(true);
           return;
         } else {
           setAuthError(data.detail || 'Invalid email or password.');

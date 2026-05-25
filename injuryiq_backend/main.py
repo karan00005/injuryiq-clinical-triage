@@ -710,25 +710,27 @@ async def auth_signup(request: UserRegisterRequest):
     if existing:
         raise HTTPException(status_code=400, detail="An account with this email already exists. Please login instead.")
 
-    # Create user record (immediately verified by default)
+    # Create user record (unverified until OTP confirmed)
     new_user = {
         "email": email,
         "password": password,
         "name": name,
-        "is_verified": True,
+        "is_verified": False,
         "auth_provider": "email",
         "createdAt": datetime.utcnow().isoformat()
     }
     upsert_user(new_user)
-    print(f"[AUTH] New user registered and verified: {email}")
+    print(f"[AUTH] New user registered (unverified): {email}")
 
-    # Send Welcome Email immediately
-    send_welcome_email(email, name)
+    # Generate and send OTP
+    otp_code = generate_otp()
+    store_otp(email, otp_code)
+    send_otp_email(email, name, otp_code)
 
     return AuthResponse(
         success=True,
-        otp_required=False,
-        message="Registration successful! Welcome to InjuryIQ AI.",
+        otp_required=True,
+        message=f"Registration successful! Please verify your email. An OTP has been sent to {email}.",
         user={"email": email, "name": name}
     )
 
@@ -749,6 +751,9 @@ async def verify_otp(request: OtpVerifyRequest):
     user["is_verified"] = True
     upsert_user(user)
     print(f"[AUTH] Email verified for user: {email}")
+
+    # Send Welcome Email upon successful verification
+    send_welcome_email(email, user["name"])
 
     return AuthResponse(
         success=True,
@@ -828,7 +833,21 @@ async def auth_login(request: UserLoginRequest):
     if user.get("password") != password:
         raise HTTPException(status_code=400, detail="Invalid email or password. Please check your credentials.")
 
+    if not user.get("is_verified", False):
+        # Re-send OTP for convenience
+        otp_code = generate_otp()
+        store_otp(email, otp_code)
+        send_otp_email(email, user["name"], otp_code)
+        raise HTTPException(
+            status_code=403,
+            detail=f"Your email is not verified yet. A new OTP has been sent to {email}. Please verify first."
+        )
+
     print(f"[AUTH] Login successful: {email}")
+    
+    # Send welcome email upon successful login
+    send_welcome_email(email, user["name"])
+
     return AuthResponse(
         success=True,
         message="Login successful!",
