@@ -3552,8 +3552,8 @@ Return your response strictly in the following JSON format:
           <div>
             {/* Hero Welcome Banner */}
             <div className="hero-banner" style={{ marginBottom: '1.5rem' }}>
-              <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', flexWrap: 'wrap', gap: '1rem' }}>
-                <div>
+              <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', flexWrap: 'wrap', gap: '1.5rem' }}>
+                <div style={{ flex: '1 1 280px' }}>
                   <div style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--brand-primary)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '0.4rem' }}>👋 Welcome back</div>
                   <h2 style={{ fontSize: '1.75rem', fontWeight: 800, margin: '0 0 0.5rem', background: 'linear-gradient(135deg, #f0f6ff, var(--brand-primary))', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
                     {currentUser.name}
@@ -3561,7 +3561,7 @@ Return your response strictly in the following JSON format:
                   <p style={{ color: 'var(--text-secondary)', margin: '0 0 1.5rem', fontSize: '0.92rem', maxWidth: 400 }}>
                     {t.appSub}
                   </p>
-                  <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
+                  <div className="hero-buttons">
                     <button className="btn btn-primary glow-primary" onClick={handleStartNewAssessment} style={{ borderRadius: 'var(--radius-full)' }}>
                       ✦ {t.startNew}
                     </button>
@@ -3579,11 +3579,11 @@ Return your response strictly in the following JSON format:
                 </div>
                 {/* Stats mini row */}
                 <div className="hero-stats-row">
-                  <div className="stat-card" style={{ padding: '0.9rem 1.1rem', minWidth: 110 }}>
+                  <div className="stat-card" style={{ padding: '0.9rem 1.1rem', minWidth: 'auto', flex: 1 }}>
                     <div style={{ fontSize: '0.68rem', color: 'var(--text-muted)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.25rem' }}>Assessments</div>
                     <div style={{ fontSize: '1.6rem', fontWeight: 800, color: 'var(--brand-primary)' }}>{history.length}</div>
                   </div>
-                  <div className="stat-card" style={{ padding: '0.9rem 1.1rem' }}>
+                  <div className="stat-card" style={{ padding: '0.9rem 1.1rem', minWidth: 'auto', flex: 1 }}>
                     <div style={{ fontSize: '0.68rem', color: 'var(--text-muted)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.25rem' }}>Last Risk</div>
                     <div style={{ fontSize: '0.9rem', fontWeight: 700 }}>
                       {history.length > 0
@@ -5490,7 +5490,7 @@ Return your response strictly in the following JSON format:
 
           {/* AI Visual Scan & Diagnostics Panel */}
           {selectedHistoryItem.aiResult && (
-            <div className="glass-panel hide-on-print" style={{ padding: '2rem', marginTop: '2rem', marginBottom: '2rem', borderTop: '4px solid var(--primary)' }}>
+            <div className="glass-panel" style={{ padding: '2rem', marginTop: '2rem', marginBottom: '2rem', borderTop: '4px solid var(--primary)' }}>
               <h3 style={{ fontSize: '1.4rem', fontWeight: 700, marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
                 🧠 {lang === 'hi' ? "AI उन्नत छवि स्कैन एवं विजुअल डायग्नोस्टिक्स" : "AI Deep Visual Scanning & Diagnostics"}
                 <span className="badge" style={{ fontSize: '0.75rem', background: 'rgba(99, 102, 241, 0.1)', color: 'var(--primary)', border: '1px solid var(--primary)' }}>Clinical Scan v2.5</span>
@@ -5572,28 +5572,28 @@ Return your response strictly in the following JSON format:
                     🔬 {lang === 'hi' ? "कंप्यूटर विज़न विश्लेषणात्मक परिणाम" : "Computer Vision Diagnostic Metrics"}
                   </div>
                   
-                  <div className="glass-panel" style={{ padding: '1.25rem', display: 'flex', flexDirection: 'column', gap: '0.85rem', background: 'rgba(0,0,0,0.15)', border: '1px solid rgba(255,255,255,0.03)' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid rgba(255,255,255,0.05)', paddingBottom: '0.5rem', fontSize: '0.9rem' }}>
+                  <div className="glass-panel" style={{ padding: '1.25rem', display: 'flex', flexDirection: 'column', gap: '0.85rem', background: 'var(--bg-glass)', border: '1px solid var(--border)' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid var(--border)', paddingBottom: '0.5rem', fontSize: '0.9rem' }}>
                       <span style={{ color: 'var(--text-secondary)' }}>Scanned Target:</span>
-                      <strong style={{ color: 'white' }}>{selectedHistoryItem.aiResult.detectedContent || "Human Joint Contour"}</strong>
+                      <strong style={{ color: 'var(--text-primary)' }}>{selectedHistoryItem.aiResult.detectedContent || "Human Joint Contour"}</strong>
                     </div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid rgba(255,255,255,0.05)', paddingBottom: '0.5rem', fontSize: '0.9rem' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid var(--border)', paddingBottom: '0.5rem', fontSize: '0.9rem' }}>
                       <span style={{ color: 'var(--text-secondary)' }}>Swelling Zone:</span>
                       <strong style={{ color: 'var(--primary)' }}>{selectedHistoryItem.aiResult.swellingZone}</strong>
                     </div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid rgba(255,255,255,0.05)', paddingBottom: '0.5rem', fontSize: '0.9rem' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid var(--border)', paddingBottom: '0.5rem', fontSize: '0.9rem' }}>
                       <span style={{ color: 'var(--text-secondary)' }}>Swelling Severity:</span>
                       <span className={`badge badge-${selectedHistoryItem.aiResult.swellingPrediction === 'none' ? 'low' : (selectedHistoryItem.aiResult.swellingPrediction === 'severe' ? 'emergency' : (selectedHistoryItem.aiResult.swellingPrediction === 'moderate' ? 'moderate' : 'low'))}`} style={{ fontSize: '0.75rem', padding: '0.15rem 0.5rem' }}>
                         {selectedHistoryItem.aiResult.swellingPrediction ? selectedHistoryItem.aiResult.swellingPrediction.toUpperCase() : 'NONE'}
                       </span>
                     </div>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem', borderBottom: '1px solid rgba(255,255,255,0.05)', paddingBottom: '0.5rem', fontSize: '0.9rem' }}>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem', borderBottom: '1px solid var(--border)', paddingBottom: '0.5rem', fontSize: '0.9rem' }}>
                       <span style={{ color: 'var(--text-secondary)' }}>Bruising & Hematoma Metrics:</span>
-                      <span style={{ color: 'white', fontSize: '0.85rem', marginTop: '0.15rem', fontStyle: 'italic' }}>
+                      <span style={{ color: 'var(--text-primary)', fontSize: '0.85rem', marginTop: '0.15rem', fontStyle: 'italic' }}>
                         {selectedHistoryItem.aiResult.bruisingMetrics}
                       </span>
                     </div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid rgba(255,255,255,0.05)', paddingBottom: '0.5rem', fontSize: '0.9rem' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid var(--border)', paddingBottom: '0.5rem', fontSize: '0.9rem' }}>
                       <span style={{ color: 'var(--text-secondary)' }}>Alignment & Symmetry Check:</span>
                       <strong style={{ color: selectedHistoryItem.aiResult.alignmentCheck && (selectedHistoryItem.aiResult.alignmentCheck.toLowerCase().includes('suspected') || selectedHistoryItem.aiResult.alignmentCheck.toLowerCase().includes('misalignment')) ? 'var(--color-emergency)' : '#34d399' }}>
                         {selectedHistoryItem.aiResult.alignmentCheck || "Normal symmetry."}
@@ -5617,7 +5617,7 @@ Return your response strictly in the following JSON format:
                 <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'flex-start' }}>
                   <span style={{ fontSize: '1.2rem', marginTop: '-0.1rem' }}>🤖</span>
                   <div>
-                    <strong style={{ color: '#a5b4fc', fontSize: '0.9rem' }}>{lang === 'hi' ? "मशीन लर्निंग मॉडल निष्कर्ष:" : "Machine Learning Diagnosis Summary:"}</strong>
+                    <strong style={{ color: 'var(--primary)', fontSize: '0.9rem' }}>{lang === 'hi' ? "मशीन लर्निंग मॉडल निष्कर्ष:" : "Machine Learning Diagnosis Summary:"}</strong>
                     <p style={{ margin: '0.25rem 0 0 0', fontSize: '0.85rem', color: 'var(--text-secondary)', lineHeight: 1.5 }}>
                       {selectedHistoryItem.aiResult.reason}
                     </p>
