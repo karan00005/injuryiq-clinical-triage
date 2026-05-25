@@ -1041,6 +1041,49 @@ h1, h2, h3, h4, h5, h6 {
     gap: 1rem !important;
     width: 100% !important;
   }
+  .history-card {
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 1rem !important;
+    padding: 1.25rem !important;
+  }
+  .history-card-left {
+    width: 100% !important;
+  }
+  .history-card-right {
+    display: flex !important;
+    justify-content: space-between !important;
+    align-items: center !important;
+    width: 100% !important;
+    border-top: 1px solid var(--border) !important;
+    padding-top: 0.75rem !important;
+    margin-top: 0.25rem !important;
+  }
+  .tabs-header > button {
+    flex: 1 1 auto;
+    font-size: 0.82rem !important;
+    padding: 0.5rem 0.8rem !important;
+  }
+  .nav-pill {
+    white-space: normal !important;
+    text-align: center !important;
+  }
+}
+
+.history-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1.5rem;
+}
+
+.tabs-header {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 1.5rem;
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 0.5rem;
+  flex-wrap: wrap;
 }
 
 .hero-stats-row {

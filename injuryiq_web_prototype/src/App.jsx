@@ -5175,7 +5175,7 @@ Return your response strictly in the following JSON format:
           </div>
 
           {/* Tab Selector for Triage Report vs Smart Remedies */}
-          <div className="tabs-header hide-on-print" style={{ display: 'flex', gap: '0.5rem', marginBottom: '1.5rem', borderBottom: '1px solid var(--border)', paddingBottom: '0.5rem' }}>
+          <div className="tabs-header hide-on-print">
             <button 
               className={`nav-pill ${remedyTab === 'assessment' ? 'active' : ''}`} 
               onClick={() => setRemedyTab('assessment')}
@@ -5889,15 +5889,14 @@ Return your response strictly in the following JSON format:
             {history.map((item, idx) => (
               <div 
                 key={idx} 
-                className="glass-panel glass-panel-hover" 
-                style={{ padding: '1.5rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '1.5rem' }}
+                className="glass-panel glass-panel-hover history-card"
               >
-                <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-                  <div style={{ background: 'rgba(59,130,246,0.1)', color: 'var(--primary)', padding: '0.75rem', borderRadius: '50%' }}>
+                <div className="history-card-left" style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                  <div style={{ background: 'rgba(59,130,246,0.1)', color: 'var(--primary)', padding: '0.75rem', borderRadius: '50%', flexShrink: 0 }}>
                     <Activity size={20} />
                   </div>
                   <div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
                       <span style={{ fontWeight: 700, textTransform: 'capitalize', fontSize: '1.1rem' }}>
                         {lang === 'hi' ? (item.injuryArea === 'ankle' ? 'टखना' : item.injuryArea === 'knee' ? 'घुटना' : item.injuryArea === 'foot' ? 'पैर' : 'कलाई') : item.injuryArea} Injury
                       </span>
@@ -5905,7 +5904,7 @@ Return your response strictly in the following JSON format:
                         {item.riskLevel}
                       </span>
                     </div>
-                    <div style={{ display: 'flex', gap: '1.5rem', fontSize: '0.85rem', color: darkMode ? 'var(--text-secondary)' : 'var(--text-light-secondary)', marginTop: '0.25rem' }}>
+                    <div style={{ display: 'flex', gap: '1.25rem', flexWrap: 'wrap', fontSize: '0.85rem', color: darkMode ? 'var(--text-secondary)' : 'var(--text-light-secondary)', marginTop: '0.25rem' }}>
                       <span style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
                         <Clock size={12} /> {item.injuryTimeAgo}
                       </span>
@@ -5916,28 +5915,30 @@ Return your response strictly in the following JSON format:
                   </div>
                 </div>
 
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                  <div style={{ textAlign: 'right', marginRight: '1rem' }}>
-                    <div style={{ fontSize: '1.3rem', fontWeight: 800, fontFamily: 'monospace' }}>{item.riskScore}</div>
-                    <div style={{ fontSize: '0.7rem', color: 'var(--text-secondary)' }}>score</div>
+                <div className="history-card-right">
+                  <div style={{ textAlign: 'left', display: 'flex', gap: '0.4rem', alignItems: 'baseline' }}>
+                    <span style={{ fontSize: '1.4rem', fontWeight: 800, fontFamily: 'monospace', color: 'var(--text-primary)' }}>{item.riskScore}</span>
+                    <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>score</span>
                   </div>
-                  <button 
-                    className="btn btn-secondary" 
-                    style={{ padding: '0.5rem' }}
-                    onClick={() => {
-                      setSelectedHistoryItem(item);
-                      setView('details');
-                    }}
-                  >
-                    <Eye size={16} />
-                  </button>
-                  <button 
-                    className="btn btn-secondary" 
-                    style={{ padding: '0.5rem', color: 'var(--color-emergency)' }}
-                    onClick={() => handleDeleteHistory(item.assessmentId)}
-                  >
-                    <Trash2 size={16} />
-                  </button>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                    <button 
+                      className="btn btn-secondary" 
+                      style={{ padding: '0.5rem', minHeight: '34px', minWidth: '34px' }}
+                      onClick={() => {
+                        setSelectedHistoryItem(item);
+                        setView('details');
+                      }}
+                    >
+                      <Eye size={16} />
+                    </button>
+                    <button 
+                      className="btn btn-secondary" 
+                      style={{ padding: '0.5rem', color: 'var(--color-emergency)', minHeight: '34px', minWidth: '34px' }}
+                      onClick={() => handleDeleteHistory(item.assessmentId)}
+                    >
+                      <Trash2 size={16} />
+                    </button>
+                  </div>
                 </div>
               </div>
             ))}
