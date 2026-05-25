@@ -769,6 +769,7 @@ h1, h2, h3, h4, h5, h6 {
 
   /* Questionnaire */
   .questionnaire-content { padding: 1rem !important; }
+  .glass-panel { padding: 1rem !important; }
 
   /* Score circle */
   .score-circle { width: 90px !important; height: 90px !important; font-size: 1.8rem !important; }
