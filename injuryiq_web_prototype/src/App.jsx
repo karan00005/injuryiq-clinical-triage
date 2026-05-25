@@ -2915,17 +2915,19 @@ Return your response strictly in the following JSON format:
     const comparisonIsSolidPromise = comparisonPhotoUrl ? checkIsSolidColor(comparisonPhotoUrl) : Promise.resolve(false);
 
     const logs = [
-      "🔄 Initializing PyTorch computer vision engine...",
-      "📸 Image format validation: JPEG/PNG check passed.",
-      "🤖 Loading ResNet50-MobileNetV3 hybrid weights...",
-      "🎨 Performing Tensor normalization and resizing to 224x224...",
-      "🧠 Running CNN forward pass: feature extraction on convolutional layers...",
-      "🔍 Checking anatomical landmark match...",
-      "📸 Performing color histogram skin-pixel validation..."
+      "🩺 Phase 1/12: Initializing deep neural diagnostic core...",
+      "📸 Phase 2/12: Running high-resolution edge extraction & shape modeling...",
+      "🎨 Phase 3/12: Normalizing RGB channels & performing contrast balance...",
+      "🧬 Phase 4/12: Performing skeletal alignment outline tracking...",
+      "🔍 Phase 5/12: Running CNN layers: detecting joint contours & contours symmetry...",
+      "📐 Phase 6/12: Estimating localized volumetric swelling index (Soft-tissue Edema)...",
+      "📊 Phase 7/12: Running multi-spectral bruising analysis: checking subcutaneous hematoma spreads...",
+      "🔬 Phase 8/12: Dispatching clinical image payload to Gemini 2.5 Vision node...",
+      "🧠 Phase 9/12: Generating Chain-of-Thought reasoning for joint pathology...",
+      "🎯 Phase 10/12: Resolving diagnostic coordinates mapping for swelling zone...",
+      "📋 Phase 11/12: Synthesizing clinical triage recommendations...",
+      "✅ Phase 12/12: Deep scanning complete. Generating final report..."
     ];
-    if (geminiKey.trim() && injuryPhoto) {
-      logs.push("🔬 Analyzing image contents using Gemini 2.5 Vision...");
-    }
 
     let currentLogIndex = 0;
     const interval = setInterval(async () => {
@@ -3074,7 +3076,7 @@ Return your response strictly in the following JSON format:
           alert("Error during image analysis. Please try again.");
         }
       }
-    }, 400);
+    }, 1000);
   };
 
   const handleFinishAssessment = async () => {
@@ -4864,19 +4866,65 @@ Return your response strictly in the following JSON format:
                 </p>
 
                 {isAnalyzing ? (
-                  <div className="glass-panel" style={{ padding: '1.5rem', background: '#020617', fontFamily: 'monospace', fontSize: '0.85rem', border: '1px solid #1e293b' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--primary)', marginBottom: '1rem', fontWeight: 'bold' }}>
-                      <RefreshCw size={16} className="glow-primary" style={{ animation: 'spin 1s linear infinite' }} />
-                      <span>PYTORCH INFERENCE RUNNING...</span>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem', width: '100%' }}>
+                    {/* Visual Photo Scanner Dial */}
+                    <div style={{ display: 'flex', gap: '1.5rem', flexWrap: 'wrap', alignItems: 'center' }}>
+                      {injuryPhotoUrl && (
+                        <div style={{ flex: '1 1 240px', position: 'relative', borderRadius: '12px', overflow: 'hidden', border: '2px solid rgba(16, 185, 129, 0.4)', background: '#020617', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+                          <img src={injuryPhotoUrl} alt="Scanning" style={{ width: '100%', maxHeight: '200px', objectFit: 'contain', display: 'block', opacity: 0.85 }} />
+                          {/* Laser Scanning Line */}
+                          <div style={{
+                            position: 'absolute',
+                            left: 0,
+                            width: '100%',
+                            height: '4px',
+                            background: 'linear-gradient(90deg, transparent, #10b981, transparent)',
+                            boxShadow: '0 0 15px #10b981, 0 0 6px #10b981',
+                            animation: 'laserScan 2.2s ease-in-out infinite'
+                          }}></div>
+                          {/* Dynamic text overlay */}
+                          <div style={{
+                            position: 'absolute',
+                            bottom: '10px',
+                            left: '50%',
+                            transform: 'translateX(-50%)',
+                            background: 'rgba(2, 6, 23, 0.75)',
+                            color: '#10b981',
+                            fontSize: '0.75rem',
+                            fontWeight: 'bold',
+                            padding: '0.2rem 0.6rem',
+                            borderRadius: '4px',
+                            border: '1px solid rgba(16, 185, 129, 0.3)',
+                            fontFamily: 'monospace',
+                            letterSpacing: '0.05em'
+                          }}>
+                            ANATOMICAL RADAR ACTIVE
+                          </div>
+                        </div>
+                      )}
+                      
+                      {/* Console Log */}
+                      <div className="glass-panel" style={{ flex: '2 1 320px', padding: '1.5rem', background: '#020617', fontFamily: 'monospace', fontSize: '0.85rem', border: '1px solid #1e293b', display: 'flex', flexDirection: 'column', height: '200px', justifyContent: 'flex-start', overflow: 'hidden' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--primary)', marginBottom: '0.75rem', fontWeight: 'bold' }}>
+                          <RefreshCw size={16} style={{ animation: 'spin 1.5s linear infinite' }} />
+                          <span>AI INFERENCE & TISSUE LAYERS SCANNING...</span>
+                        </div>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem', color: '#10b981', overflowY: 'auto', flex: 1, textAlign: 'left', paddingBottom: '0.5rem' }}>
+                          {analysisLog.map((log, idx) => (
+                            <div key={idx} className="fade-in" style={{ textShadow: '0 0 2px rgba(16,185,129,0.3)' }}>{log}</div>
+                          ))}
+                        </div>
+                      </div>
                     </div>
+                    
                     <style>{`
+                      @keyframes laserScan {
+                        0% { top: 0%; }
+                        50% { top: 100%; }
+                        100% { top: 0%; }
+                      }
                       @keyframes spin { 100% { transform: rotate(360deg); } }
                     `}</style>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem', color: '#10b981', maxHeight: '180px', overflowY: 'auto' }}>
-                      {analysisLog.map((log, idx) => (
-                        <div key={idx}>{log}</div>
-                      ))}
-                    </div>
                   </div>
                 ) : aiResult ? (
                   <div className="glass-panel" style={{ padding: '1.5rem', border: '1px solid rgba(16, 185, 129, 0.3)', background: 'rgba(16, 185, 129, 0.05)' }}>
