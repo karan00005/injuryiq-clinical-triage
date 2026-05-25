@@ -1,0 +1,51 @@
+[
+  {
+    "email": "rama1@gmail.com",
+    "password": "123456",
+    "name": "rama",
+    "is_verified": false,
+    "auth_provider": "email",
+    "createdAt": "2026-05-24T02:46:53.645568"
+  },
+  {
+    "email": "karanagarwal0005@gmail.com",
+    "password": "123456789",
+    "name": "karan",
+    "is_verified": true,
+    "auth_provider": "email",
+    "createdAt": "2026-05-24T02:47:32.713436"
+  },
+  {
+    "email": "karan@gmail.com",
+    "password": "123456789",
+    "name": "karan",
+    "is_verified": true,
+    "auth_provider": "email",
+    "createdAt": "2026-05-24T03:33:08.212413"
+  },
+  {
+    "email": "jindalkaran0005@gmail.com",
+    "password": "123456789",
+    "name": "karan",
+    "is_verified": false,
+    "auth_provider": "email",
+    "createdAt": "2026-05-25T06:12:43.721698"
+  },
+  {
+    "email": "karanagarwal2112005@gmail.com",
+    "password": "__google__",
+    "name": "Karan Jindal",
+    "picture": "https://lh3.googleusercontent.com/a/ACg8ocIQAr_HXFZQXTdwJ9E4A3hl6441K8ZfGaocjjc5voLwPmAkig=s96-c",
+    "is_verified": true,
+    "auth_provider": "google",
+    "createdAt": "2026-05-25T06:55:52.670384"
+  },
+  {
+    "email": "karanji00005@gmail.com",
+    "password": "123456",
+    "name": "karan",
+    "is_verified": true,
+    "auth_provider": "email",
+    "createdAt": "2026-05-25T08:17:37.916055"
+  }
+]

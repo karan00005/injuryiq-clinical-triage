@@ -47,6 +47,7 @@ class AssessmentRequest(BaseModel):
     redFlags: RedFlagsSchema
     imageUrl: Optional[str] = None
     comparisonImageUrl: Optional[str] = None
+    customNotes: Optional[str] = None  # Free-text notes or voice-transcribed symptom details
     lang: str = "en"  # language preference for generated recommendation text ('en', 'hi', 'hn')
 
 class ScoreBreakdownItem(BaseModel):
@@ -68,7 +69,9 @@ class AssessmentResponse(BaseModel):
     recommendations: RecommendationActions
     imageUrl: Optional[str] = None
     comparisonImageUrl: Optional[str] = None
+    customNotes: Optional[str] = None
     createdAt: str
+
 
 class RegisterNotifyRequest(BaseModel):
     email: str

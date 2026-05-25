@@ -104,7 +104,11 @@ const TRANSLATIONS = {
     chatPlaceholder: "Ask or tap Mic to speak...",
     lowRiskTitle: "Low Risk — Soft Tissue Injury Likely (Sprain)",
     modRiskTitle: "Moderate Risk — Possible Sprain or Minor Crack",
-    highRiskTitle: "High Risk — High Fracture Probability"
+    highRiskTitle: "High Risk — High Fracture Probability",
+    customNotesLabel: "Symptom Description (Optional) — Type or speak in your own words:",
+    customNotesPlaceholder: "Describe how the injury happened, what you are feeling, where the pain is, etc...",
+    speakBtnStart: "Voice Typing",
+    speakBtnListening: "Listening... Speak now"
   },
   hi: {
     welcome: "स्वागत है, करन 👋",
@@ -172,7 +176,11 @@ const TRANSLATIONS = {
     chatPlaceholder: "बोलने के लिए माइक दबाएं...",
     lowRiskTitle: "कम जोखिम — मोच या सामान्य चोट की संभावना",
     modRiskTitle: "मध्यम जोखिम — महत्वपूर्ण मोच या मामूली फ्रैक्चर की संभावना",
-    highRiskTitle: "उच्च जोखिम — फ्रैक्चर होने की अत्यधिक संभावना"
+    highRiskTitle: "उच्च जोखिम — फ्रैक्चर होने की अत्यधिक संभावना",
+    customNotesLabel: "लक्षणों का विवरण (वैकल्पिक) — लिखें या अपने शब्दों में बोलें:",
+    customNotesPlaceholder: "लिखें कि चोट कैसे लगी, आप क्या महसूस कर रहे हैं, दर्द कहाँ है, आदि...",
+    speakBtnStart: "आवाज़ से लिखें",
+    speakBtnListening: "सुन रहे हैं... अभी बोलें"
   },
   hn: { // Hinglish
     welcome: "Welcome, Karan 👋",
@@ -240,7 +248,11 @@ const TRANSLATIONS = {
     chatPlaceholder: "Kuch bolein ya type karein...",
     lowRiskTitle: "Low Risk — Soft Tissue Injury Likely (Sprain)",
     modRiskTitle: "Moderate Risk — Possible Sprain or Minor Crack",
-    highRiskTitle: "High Risk — High Fracture Probability"
+    highRiskTitle: "High Risk — High Fracture Probability",
+    customNotesLabel: "Symptom Description (Optional) — Type karein ya bol kar batayein:",
+    customNotesPlaceholder: "Describe karein ki chot kaise lagi, aapko kya feel ho raha hai, pain kahan hai, etc...",
+    speakBtnStart: "Bol kar Type karein",
+    speakBtnListening: "Sunn rahe hain... Bolein abhi"
   }
 };
 
@@ -1005,6 +1017,13 @@ export default function App() {
   const [disclaimerAccepted, setDisclaimerAccepted] = useState(false);
   const [isSosOpen, setIsSosOpen] = useState(false);
   const [sosStatus, setSosStatus] = useState('idle'); // 'idle', 'locating', 'sending', 'sent'
+  const [deferredPrompt, setDeferredPrompt] = useState(null);
+  const [showInstallGuide, setShowInstallGuide] = useState(false);
+  const [remedyTab, setRemedyTab] = useState('assessment'); // 'assessment', 'remedies'
+  const [activeDrawer, setActiveDrawer] = useState('medicines'); // 'medicines', 'ayurveda', 'supports'
+  const [completedRemedies, setCompletedRemedies] = useState({}); // { [remedyId_ingredientIndex]: boolean }
+  const [goniometerAngle, setGoniometerAngle] = useState(90); // default 90 degrees
+  const [isDraggingArm, setIsDraggingArm] = useState(false);
 
   // --- CHATBOT WIDGET STATES ---
   const [chatOpen, setChatOpen] = useState(false);
@@ -1070,8 +1089,11 @@ export default function App() {
     boneProtruding: false,
     numbnessBelow: false,
     blueColdBelow: false,
-    unrelivedPain: false
+    unrelivedPain: false,
+    customNotes: ''
   });
+
+  const [isSymptomListening, setIsSymptomListening] = useState(false);
 
   // --- IMAGE UPLOAD & AI PROCESSING STATES ---
   const [injuryPhoto, setInjuryPhoto] = useState(null);
@@ -1107,14 +1129,220 @@ export default function App() {
   });
   const [hoveredLog, setHoveredLog] = useState(null);
 
+  // --- GEOLOCATION CLINICS STATES ---
+  const [nearbyClinics, setNearbyClinics] = useState([]);
+  const [locLoading, setLocLoading] = useState(false);
+  const [locError, setLocError] = useState(null);
+  const [userLocation, setUserLocation] = useState(null);
+
   // --- PHYSIOTHERAPY REHAB STATES ---
   const [recoverySubTab, setRecoverySubTab] = useState('stats'); // 'stats' or 'rehab'
   const [activeExercise, setActiveExercise] = useState(null);
   const [rehabTimer, setRehabTimer] = useState(0);
   const [rehabTimerRunning, setRehabTimerRunning] = useState(false);
   const rehabTimerRef = useRef(null);
+  const goniometerSvgRef = useRef(null);
+
+  // --- GONIOMETER DRAG MATH EVENT HANDLERS ---
+  const handleGoniometerMouseMove = (e) => {
+    if (!isDraggingArm || !goniometerSvgRef.current) return;
+    const rect = goniometerSvgRef.current.getBoundingClientRect();
+    const clientX = e.clientX || (e.touches && e.touches[0]?.clientX);
+    const clientY = e.clientY || (e.touches && e.touches[0]?.clientY);
+    if (!clientX || !clientY) return;
+
+    const svgCenterX = rect.left + rect.width / 2;
+    const svgCenterY = rect.top + rect.height / 2;
+    const dx = clientX - svgCenterX;
+    const dy = clientY - svgCenterY;
+
+    let angleDeg = Math.round((Math.atan2(-dy, dx) * 180) / Math.PI);
+    if (angleDeg < 0) {
+      if (dx < 0) angleDeg = 180;
+      else angleDeg = 0;
+    }
+    const clamped = Math.min(180, Math.max(0, angleDeg));
+    setGoniometerAngle(clamped);
+  };
+
+  const handleGoniometerMouseUp = () => {
+    setIsDraggingArm(false);
+  };
+
+  useEffect(() => {
+    if (isDraggingArm) {
+      window.addEventListener('mousemove', handleGoniometerMouseMove);
+      window.addEventListener('mouseup', handleGoniometerMouseUp);
+      window.addEventListener('touchmove', handleGoniometerMouseMove, { passive: false });
+      window.addEventListener('touchend', handleGoniometerMouseUp);
+    }
+    return () => {
+      window.removeEventListener('mousemove', handleGoniometerMouseMove);
+      window.removeEventListener('mouseup', handleGoniometerMouseUp);
+      window.removeEventListener('touchmove', handleGoniometerMouseMove);
+      window.removeEventListener('touchend', handleGoniometerMouseUp);
+    };
+  }, [isDraggingArm]);
 
   const t = TRANSLATIONS[lang];
+
+  const getRemediesData = (riskLevel) => {
+    const isHindi = lang === 'hi';
+    const isHinglish = lang === 'hn';
+
+    if (riskLevel === 'low') {
+      return {
+        medicines: [
+          {
+            id: 'diclo_gel',
+            name: isHindi ? 'डाइक्लोफेनाक जेल (जैसे Volini/Moov)' : (isHinglish ? 'Diclofenac Gel (jaise Volini/Moov)' : 'Diclofenac Pain Relief Gel (e.g., Volini/Moov)'),
+            desc: isHindi ? 'प्रभावित जगह पर दिन में 3-4 बार हल्के हाथों से लगाएं। मालिश न करें।' : (isHinglish ? 'Chot wale area par din me 3-4 baar halki layer lagayein. Heavy massage na karein.' : 'Apply a thin layer gently over the painful area 3-4 times daily. Do not rub heavily.'),
+            type: 'gel'
+          },
+          {
+            id: 'para_500',
+            name: isHindi ? 'पैरासिटामोल (500mg)' : (isHinglish ? 'Paracetamol (500mg)' : 'Paracetamol (500mg) Tablet'),
+            desc: isHindi ? 'हल्का दर्द होने पर ही लें। 24 घंटे में 3 ग्राम से अधिक न लें।' : (isHinglish ? 'Mild pain hone par hi consume karein. 24 ghante me max 3g limit rakhein.' : 'Take 1 tablet if pain is active. Max limit is 3g (6 tablets) per 24 hours.'),
+            type: 'pill'
+          }
+        ],
+        ayurveda: [
+          {
+            id: 'golden_milk',
+            name: isHindi ? 'हल्दी दूध (Golden Milk)' : (isHinglish ? 'Haldi Doodh (Golden Milk)' : 'Curcumin Turmeric Milk (Golden Milk)'),
+            prepTime: isHindi ? 'सोने से पहले' : (isHinglish ? 'Sone se pehle' : 'Nightly (Before sleep)'),
+            ingredients: isHindi 
+              ? ['1 गिलास गाय का दूध (गर्म)', '1/2 चम्मच हल्दी पाउडर', '1/4 चम्मच काली मिर्च'] 
+              : (isHinglish ? ['1 glass warm milk', '1/2 tsp organic Haldi', 'A pinch of Black Pepper'] : ['1 glass of warm milk', '1/2 tsp organic turmeric powder', 'A pinch of black pepper']),
+            steps: isHindi 
+              ? ['गर्म दूध में हल्दी और काली मिर्च मिलाएं।', '5 मिनट के लिए उबालें।', 'सोने से पहले गुनगुना पिएं।'] 
+              : (isHinglish ? ['Warm milk me haldi aur kali mirch powder mix karein.', 'इसे 3-5 minutes tak boil hone dein.', 'Sone se pehle gunguna (luke-warm) consume karein.'] : ['Mix turmeric powder and black pepper into the milk.', 'Boil it gently for 3-5 minutes.', 'Drink warm before bedtime to activate anti-inflammatory pathways.'])
+          },
+          {
+            id: 'epsom_soak',
+            name: isHindi ? 'सेंधा नमक सिकाई (Epsom Salt Soak)' : (isHinglish ? 'Sendha Namak Soak (Epsom Salt)' : 'Epsom Salt Warm Water Soak'),
+            prepTime: isHindi ? '48 घंटे के बाद' : (isHinglish ? '48 hours ke baad' : 'After 48 Hours'),
+            ingredients: isHindi 
+              ? ['गुनगुना पानी (एक बाल्टी)', '1/2 कप सेंधा नमक (Epsom Salt)'] 
+              : (isHinglish ? ['Gunguna paani (warm water)', '1/2 cup Sendha Namak'] : ['Tub of warm water', '1/2 cup of Epsom salt (Sendha Namak)']),
+            steps: isHindi 
+              ? ['गुनगुने पानी में सेंधा नमक मिलाएं।', 'प्रभावित पैर/हाथ को 15-20 मिनट के लिए पानी में डुबोकर रखें।', 'यह मांसपेशियों के तनाव को कम करता है।'] 
+              : (isHinglish ? ['Warm water me sendha namak mix karein.', 'Joint/limb ko 15-20 minutes tak paani me soak karke rakhein.', 'Stiffness aur swelling reduce karne me madad karega.'] : ['Stir Epsom salt into the tub of warm water.', 'Soak the injured joint/limb for 15-20 minutes.', 'Helps relax stiff muscles and reduce residual swelling.'])
+          }
+        ],
+        supports: [
+          {
+            id: 'crepe_bandage',
+            name: isHindi ? 'इलास्टिक क्रेप बैंडेज (Crepe Bandage)' : (isHinglish ? 'Elastic Crepe Bandage' : 'Elastic Compression Crepe Bandage'),
+            desc: isHindi ? 'जोड़ को हल्का कंप्रेशन सपोर्ट देने के लिए लपेटें। ध्यान रहे कि बहुत कसकर न बांधें।' : (isHinglish ? 'Joint area ko halka support dene ke liye crepe bandage wrap karein. Jyada tight na bandhein.' : 'Wrap the crepe bandage around the joint for compression. Ensure it is firm but not too tight to cut off circulation.'),
+            type: 'wrap'
+          }
+        ],
+        banned: []
+      };
+    } else if (riskLevel === 'moderate') {
+      return {
+        medicines: [
+          {
+            id: 'ibu_400',
+            name: isHindi ? 'आइबुप्रोफेन (Ibuprofen 400mg)' : (isHinglish ? 'Ibuprofen (400mg)' : 'Ibuprofen (400mg) NSAID'),
+            desc: isHindi ? 'सूजन और गंभीर दर्द को कम करने के लिए। हमेशा भोजन के बाद लें।' : (isHinglish ? 'Swelling aur acute pain reduce karne ke liye. Hamesha khane ke baad (post-meals) lein.' : 'Anti-inflammatory tablet to reduce joint swelling. Take strictly post-meals with plenty of water.'),
+            type: 'pill'
+          },
+          {
+            id: 'pain_spray',
+            name: isHindi ? 'पेन रिलीफ स्प्रे (Volini Spray)' : (isHinglish ? 'Fast Pain Relief Spray (Volini)' : 'Fast-acting Pain Relief Topical Spray'),
+            desc: isHindi ? 'बिना दबाव डाले प्रभावित क्षेत्र पर स्प्रे करें। मालिश करने से बचें।' : (isHinglish ? 'Swollen joint par bina pressure dale spray karein. Ragar kar lagane se bachein.' : 'Spray over the swollen joint without touching it, preventing painful pressure rubbing.'),
+            type: 'spray'
+          }
+        ],
+        ayurveda: [
+          {
+            id: 'onion_turmeric_paste',
+            name: isHindi ? 'हल्दी-प्याज का लेप (Onion-Turmeric Compress)' : (isHinglish ? 'Haldi-Pyaaj Lep (Onion-Turmeric Paste)' : 'Warm Onion-Turmeric Traditional Paste'),
+            prepTime: isHindi ? 'रात में (8 घंटे)' : (isHinglish ? 'Raat bhar (Overnight)' : 'Overnight (8 Hours)'),
+            ingredients: isHindi 
+              ? ['1 पिसा हुआ प्याज', '1 चम्मच हल्दी पाउडर', '1 चम्मच सरसों का तेल', '1 पान का पत्ता (वैकल्पिक)'] 
+              : (isHinglish ? ['1 grated/grinded Onion', '1 tsp Haldi powder', '1 tbsp Mustard oil', '1 Paan ka patta (optional)'] : ['1 grated onion', '1 tsp organic turmeric powder', '1 tbsp pure mustard oil', '1 betel leaf (optional)']),
+            steps: isHindi 
+              ? ['पिसे प्याज, हल्दी और सरसों के तेल को मिलाकर गुनगुना गर्म करें।', 'प्रभावित जोड़ पर इस गुनगुने पेस्ट को धीरे से रखें।', 'पान के पत्ते से ढककर सूती कपड़े या बैंडेज से हल्के से लपेट लें और रात भर के लिए छोड़ दें।', 'यह सूजन को बहुत तेजी से खींचता है।'] 
+              : (isHinglish ? ['Pyaaj, haldi aur sarso tel ko mix karke gunguna garam karein.', 'Paste ko joint par gently (bina ragde) apply karein.', 'Paan ke patte ya cotton cloth se dhak kar bandage se wrap karein aur raat bhar chodein.', 'Ye swelling ko khinchne (inflammation relief) me best hai.'] : ['Mix grated onion, turmeric, and mustard oil, then warm it gently in a pan.', 'Apply the warm paste carefully around the swollen joint without rubbing.', 'Cover it with a betel leaf or clean cotton cloth, wrap with a bandage, and leave it overnight.'])
+          },
+          {
+            id: 'garlic_mustard_oil',
+            name: isHindi ? 'लहसुन-सरसों तेल मालिश (Garlic-Mustard Oil)' : (isHinglish ? 'Lahsun-Sarso Tel (Garlic-Mustard Oil)' : 'Warm Garlic-Infused Mustard Oil'),
+            prepTime: isHindi ? 'दिन में दो बार' : (isHinglish ? 'Din me 2 baar' : 'Twice daily'),
+            ingredients: isHindi 
+              ? ['4-5 कुचली हुई लहसुन की कलियां', '3 चम्मच सरसों का तेल'] 
+              : (isHinglish ? ['4-5 crushed garlic cloves', '3 tbsp Mustard oil'] : ['4-5 crushed garlic cloves', '3 tbsp mustard oil']),
+            steps: isHindi 
+              ? ['सरसों के तेल में लहसुन को अच्छी तरह से काला होने तक पकाएं।', 'तेल को छानकर हल्का गुनगुना होने दें।', 'प्रभावित जोड़ के चारों ओर बहुत हल्के हाथों से लगाएं। गहरे दबाव से बचें।'] 
+              : (isHinglish ? ['Sarso tel me lahsun ko tab tak garam karein jab tak wo blackish na ho jaye.', 'Tel ko chhan kar gunguna garam hone dein.', 'Moch ke charo taraf bahut light pressure se apply karein (massage na karein).'] : ['Heat mustard oil and garlic cloves until the garlic turns dark brown.', 'Strain the oil and let it cool until it is comfortably warm.', 'Apply gently around the painful joint. Avoid putting deep pressure on the joint.'])
+          }
+        ],
+        supports: [
+          {
+            id: 'ortho_brace',
+            name: isHindi ? 'ऑर्थोपेडिक सपोर्ट ब्रेस (Brace)' : (isHinglish ? 'Orthopedic Joint Support Brace' : 'Rigid Orthopedic Joint Brace'),
+            desc: isHindi ? 'जोड़ को अनावश्यक हिलाने-डुलाने से बचाने के लिए एक प्रॉपर ब्रेस का उपयोग करें (जैसे Ankle/Knee Brace)।' : (isHinglish ? 'Joint ko unwanted movements se bachane ke liye specialized brace (jaise Knee sleeve ya Ankle binder) pehnein.' : 'Use a specialized orthopedic brace rather than a standard bandage to keep the joint properly stabilized.'),
+            type: 'brace'
+          }
+        ],
+        banned: []
+      };
+    } else {
+      return {
+        medicines: [
+          {
+            id: 'para_650',
+            name: isHindi ? 'पैरासिटामोल (650mg)' : (isHinglish ? 'Paracetamol (650mg)' : 'Paracetamol (650mg) Emergency Bridge'),
+            desc: isHindi ? 'केवल आपातकालीन स्थिति में दर्द कम करने के लिए जब तक आप डॉक्टर के पास नहीं पहुँचते।' : (isHinglish ? 'Sirf emergency pain bridge ke liye jab tak aap hospital nahi pohochte.' : 'Emergency analgesic to temporarily dull the pain while traveling to the medical center.'),
+            type: 'pill'
+          }
+        ],
+        ayurveda: [],
+        supports: [
+          {
+            id: 'rigid_splint',
+            name: isHindi ? 'कठोर स्प्लिंट सपोर्ट (Rigid Splint)' : (isHinglish ? 'Rigid Cardboard/Scale Splinting' : 'Rigid First-Aid Splint Support'),
+            desc: isHindi ? 'किसी स्केल, cardboard या लकड़ी की पट्टी का उपयोग करके टूटी हुई हड्डी को पूरी तरह स्थिर करें।' : (isHinglish ? 'Limb ko bilkul hilne se rokne ke liye scale ya cardboard rakh kar bandage wrap karein (splint support).' : 'Place a rigid scale or clean cardboard along the injured limb and wrap loosely with bandage to keep the bone completely immobilized.'),
+            type: 'splint'
+          }
+        ],
+        banned: [
+          {
+            title: isHindi ? 'गर्म तेल मालिश वर्जित है' : (isHinglish ? 'Warm Oil Massage Banned!' : 'No Hot Massage / Rubbing'),
+            desc: isHindi ? 'टूटी हड्डी या गंभीर मोच में मालिश करने से नसें और खून की धमनियां फट सकती हैं।' : (isHinglish ? 'Acute chot ya fracture area me malish karne se blood vessels rupture ho sakti hain aur fracture damage badh sakta hai.' : 'Massaging a suspected fracture can rupture delicate blood vessels and cause severe internal bleeding or bone displacement.')
+          },
+          {
+            title: isHindi ? 'कोई गर्म पानी सिकाई नहीं' : (isHinglish ? 'Garam paani sikaai strictly blocked!' : 'No Heat Compress (Hot Water Fomentation)'),
+            desc: isHindi ? 'शुरुआती 48 घंटों में गर्म सिकाई करने से अंदरूनी सूजन (internal bleeding) बहुत बढ़ जाती है।' : (isHinglish ? 'Start ke 48 hours me garam compress karne se internal blood flow badhta hai, jisse swelling extreme ho jayegi.' : 'Applying heat in the first 48 hours increases internal blood flow and severely exacerbates swelling. Apply ice packs only.')
+          },
+          {
+            title: isHindi ? 'खुले घाव पर लेप न लगाएं' : (isHinglish ? 'Khule zakhm par paste na lagayein!' : 'No Ayurvedic Leps on Broken Skin'),
+            desc: isHindi ? 'यदि त्वचा छिल गई है या घाव है, तो किसी भी प्रकार का प्याज या हल्दी का पेस्ट लगाने से गंभीर इन्फेक्शन हो सकता है।' : (isHinglish ? 'Agar skin chhil gayi hai ya blood aa raha hai, toh koi paste na lagayein, isse severe infection ka risk badhta hai.' : 'Applying traditional pastes on open wounds can introduce bacteria and cause severe deep-tissue infections.')
+          }
+        ]
+      };
+    }
+  };
+
+  const handleAddRemedyReminder = (name) => {
+    if (!currentUser) return;
+    const remindersKey = `injuryiq_reminders_${currentUser.email}`;
+    const existing = localStorage.getItem(remindersKey) ? JSON.parse(localStorage.getItem(remindersKey)) : [];
+    
+    if (!existing.includes(name)) {
+      existing.push(name);
+      localStorage.setItem(remindersKey, JSON.stringify(existing));
+    }
+    
+    alert(lang === 'hi' 
+      ? `⏰ रिमाइंडर जोड़ा गया!\n\n'${name}' को आपके रिकवरी शेड्यूल में जोड़ दिया गया है।` 
+      : lang === 'hn' 
+        ? `⏰ Reminder add ho gaya!\n\n'${name}' aapke Daily Recovery Schedule me successfully save kar diya hai.` 
+        : `⏰ Reminder Added!\n\n'${name}' has been successfully added to your daily care schedule.`);
+  };
 
   // --- SYMPTOM QUESTION CONSTELLATIONS ---
   const steps = [
@@ -1128,6 +1356,57 @@ export default function App() {
     { title: t.redFlagsTitle, category: "Red Flag Screening" },
     { title: t.aiUploadTitle, category: "AI Image Upload" }
   ];
+
+  // Register Service Worker for PWA & Listen for beforeinstallprompt
+  useEffect(() => {
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('/sw.js')
+        .then((reg) => console.log('Service Worker registered successfully:', reg.scope))
+        .catch((err) => console.error('Service Worker registration failed:', err));
+    }
+
+    const handleBeforeInstallPrompt = (e) => {
+      e.preventDefault();
+      setDeferredPrompt(e);
+      console.log('[PWA] beforeinstallprompt event saved!');
+    };
+
+    window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+
+    const handleAppInstalled = () => {
+      console.log('[PWA] Installed successfully!');
+      setDeferredPrompt(null);
+    };
+    window.addEventListener('appinstalled', handleAppInstalled);
+
+    return () => {
+      window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+      window.removeEventListener('appinstalled', handleAppInstalled);
+    };
+  }, []);
+
+  const handleInstallApp = async () => {
+    if (deferredPrompt) {
+      deferredPrompt.prompt();
+      const { outcome } = await deferredPrompt.userChoice;
+      console.log(`[PWA] Install choice: ${outcome}`);
+      setDeferredPrompt(null);
+    } else {
+      setShowInstallGuide(true);
+    }
+  };
+
+  const handleDirectModalInstall = async () => {
+    if (deferredPrompt) {
+      setShowInstallGuide(false);
+      deferredPrompt.prompt();
+      const { outcome } = await deferredPrompt.userChoice;
+      console.log(`[PWA] Install choice inside modal: ${outcome}`);
+      setDeferredPrompt(null);
+    } else {
+      alert("⚠️ Direct installation is blocked by the browser (because your system disk space is 100% full, or in Private Mode).\n\nKripya apne PC me disk space clear karein, ya fir browser menu (vertical 3-dots -> Save and share -> Install) ka use karein!");
+    }
+  };
 
   // --- DATABASE LOCAL STORAGE LOADING & API KEY INIT ---
   useEffect(() => {
@@ -1163,6 +1442,26 @@ export default function App() {
     }
   }, [darkMode]);
 
+  // Helper for safety speech warnings
+  const speakSafetyText = (text, speechLang) => {
+    if (!('speechSynthesis' in window)) return;
+    window.speechSynthesis.cancel();
+    const cleanText = text.replace(/[*#]/g, "");
+    const utterance = new SpeechSynthesisUtterance(cleanText);
+    const voices = window.speechSynthesis.getVoices();
+    let selectedVoice = null;
+    if (speechLang === 'hi-IN') {
+      selectedVoice = voices.find(v => v.lang.startsWith('hi')) || voices.find(v => v.lang.includes('IN'));
+    } else {
+      selectedVoice = voices.find(v => v.lang.startsWith('en'));
+    }
+    if (selectedVoice) {
+      utterance.voice = selectedVoice;
+    }
+    utterance.lang = speechLang;
+    window.speechSynthesis.speak(utterance);
+  };
+
   // Ice Timer Hook
   useEffect(() => {
     if (iceTimerRunning) {
@@ -1183,9 +1482,37 @@ export default function App() {
             } catch (e) {
               console.log("Audio block");
             }
+
+            // Speak completion warning
+            let completedMsg = "Ice compress time completed! Please remove the ice pack immediately to avoid tissue damage.";
+            let speechLang = "en-US";
+            if (lang === 'hi') {
+              completedMsg = "समय समाप्त! ऊतकों को नुकसान से बचाने के लिए बर्फ की थैली को तुरंत हटा दें।";
+              speechLang = "hi-IN";
+            } else if (lang === 'hn') {
+              completedMsg = "Time khatam! Tissue damage se bachne ke liye barf ki pack ko turant hata dein.";
+              speechLang = "hi-IN";
+            }
+            speakSafetyText(completedMsg, speechLang);
+
             alert("⏰ Ice compress time completed! Please remove the ice pack.");
             return 1200;
           }
+
+          // Midway warning at 10 minutes (600 seconds)
+          if (prev === 601) {
+            let midwayMsg = "Ten minutes remaining. Keep checking skin color.";
+            let speechLang = "en-US";
+            if (lang === 'hi') {
+              midwayMsg = "दस मिनट शेष हैं। त्वचा का रंग देखते रहें।";
+              speechLang = "hi-IN";
+            } else if (lang === 'hn') {
+              midwayMsg = "Dus minute bache hain. Skin ka color check karte rahein.";
+              speechLang = "hi-IN";
+            }
+            speakSafetyText(midwayMsg, speechLang);
+          }
+
           return prev - 1;
         });
       }, 1000);
@@ -1193,7 +1520,7 @@ export default function App() {
       clearInterval(timerRef.current);
     }
     return () => clearInterval(timerRef.current);
-  }, [iceTimerRunning]);
+  }, [iceTimerRunning, lang]);
 
   // Chatbot Auto-scroll
   useEffect(() => {
@@ -1229,6 +1556,19 @@ export default function App() {
             } catch (e) {
               console.log("Audio context blocked");
             }
+
+            // Speak completion
+            let completedMsg = `Exercise completed. Great job!`;
+            let speechLang = "en-US";
+            if (lang === 'hi') {
+              completedMsg = `कसरत पूरी हुई। बहुत बढ़िया!`;
+              speechLang = "hi-IN";
+            } else if (lang === 'hn') {
+              completedMsg = `Exercise complete ho gayi. Bahut accha kiya!`;
+              speechLang = "hi-IN";
+            }
+            speakSafetyText(completedMsg, speechLang);
+
             if (activeExercise && currentUser && activeTrackingId) {
               const logsKey = `injuryiq_recovery_logs_${currentUser.email}_${activeTrackingId}`;
               const todayStr = new Date().toISOString().split('T')[0];
@@ -1264,6 +1604,21 @@ export default function App() {
             alert(`🎉 Exercise completed: ${activeExercise ? activeExercise.name : 'Rehab exercise'}! Nice job.`);
             return 0;
           }
+
+          // Speak midway point
+          if (activeExercise && prev === Math.floor(activeExercise.duration / 2) + 1) {
+            let midwayMsg = "Halfway there. Keep going!";
+            let speechLang = "en-US";
+            if (lang === 'hi') {
+              midwayMsg = "आधा समय समाप्त। जारी रखें!";
+              speechLang = "hi-IN";
+            } else if (lang === 'hn') {
+              midwayMsg = "Aadha time ho gaya hai. Lage rahein!";
+              speechLang = "hi-IN";
+            }
+            speakSafetyText(midwayMsg, speechLang);
+          }
+
           return prev - 1;
         });
       }, 1000);
@@ -1271,12 +1626,24 @@ export default function App() {
       clearInterval(rehabTimerRef.current);
     }
     return () => clearInterval(rehabTimerRef.current);
-  }, [rehabTimerRunning, activeExercise, recoveryLogs, currentUser, activeTrackingId]);
+  }, [rehabTimerRunning, activeExercise, recoveryLogs, currentUser, activeTrackingId, lang]);
 
   const startRehabTimer = (exercise) => {
     setActiveExercise(exercise);
     setRehabTimer(exercise.duration);
     setRehabTimerRunning(true);
+
+    // Speak start
+    let startMsg = `Starting exercise: ${exercise.name}. Focus on your posture.`;
+    let speechLang = "en-US";
+    if (lang === 'hi') {
+      startMsg = `कसरत शुरू: ${exercise.name}। अपना संतुलन बनाए रखें।`;
+      speechLang = "hi-IN";
+    } else if (lang === 'hn') {
+      startMsg = `Exercise shuru: ${exercise.name}. Apni position stable rakhein.`;
+      speechLang = "hi-IN";
+    }
+    speakSafetyText(startMsg, speechLang);
   };
 
   const toggleRehabTimer = () => {
@@ -1386,8 +1753,165 @@ export default function App() {
     }
   };
 
+  const DEFAULT_TRAUMA_CENTERS = [
+    {
+      name: "AIIMS JPNA Apex Trauma Center",
+      address: "Safdarjung Enclave, New Delhi, Delhi 110029",
+      phone: "011-26731100",
+      lat: 28.5672,
+      lng: 77.2100
+    },
+    {
+      name: "RML Hospital Trauma Centre",
+      address: "Baba Kharak Singh Marg, Connaught Place, New Delhi 110001",
+      phone: "011-23365550",
+      lat: 28.6253,
+      lng: 77.2084
+    },
+    {
+      name: "Safdarjung Hospital Emergency Medicine",
+      address: "Ansari Nagar East, New Delhi, Delhi 110029",
+      phone: "011-26707100",
+      lat: 28.5665,
+      lng: 77.2064
+    }
+  ];
+
+  const calculateDistance = (lat1, lon1, lat2, lon2) => {
+    const R = 6371; // Radius of the earth in km
+    const dLat = (lat2 - lat1) * Math.PI / 180;
+    const dLon = (lon2 - lon1) * Math.PI / 180;
+    const a = 
+      Math.sin(dLat/2) * Math.sin(dLat/2) +
+      Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * 
+      Math.sin(dLon/2) * Math.sin(dLon/2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+    const d = R * c; // Distance in km
+    return d.toFixed(1);
+  };
+
+  const handleFindClinics = () => {
+    setLocLoading(true);
+    setLocError(null);
+    if (!navigator.geolocation) {
+      setLocError(lang === 'hi' ? "आपका ब्राउज़र जियोलोकेशन का समर्थन नहीं करता है।" : "Geolocation is not supported by your browser.");
+      setLocLoading(false);
+      setNearbyClinics(DEFAULT_TRAUMA_CENTERS.map(c => ({ ...c, distance: "N/A" })));
+      return;
+    }
+    navigator.geolocation.getCurrentPosition(
+      async (position) => {
+        const { latitude, longitude } = position.coords;
+        setUserLocation({ latitude, longitude });
+        
+        try {
+          // Query OSM Overpass API for hospitals/clinics within 8000m (8km)
+          const query = `[out:json][timeout:15];(node["amenity"="hospital"](around:8000,${latitude},${longitude});way["amenity"="hospital"](around:8000,${latitude},${longitude});node["amenity"="clinic"](around:8000,${latitude},${longitude}););out center;`;
+          const response = await fetch(`https://overpass-api.de/api/interpreter?data=${encodeURIComponent(query)}`);
+          if (!response.ok) {
+            throw new Error("Overpass query failed");
+          }
+          const data = await response.json();
+          
+          if (data && data.elements && data.elements.length > 0) {
+            const hospitals = data.elements.map(el => {
+              const name = el.tags?.name || (lang === 'hi' ? "अस्पताल / क्लिनिक" : "Hospital / Clinic");
+              const latVal = el.lat || el.center?.lat || latitude;
+              const lngVal = el.lon || el.center?.lon || longitude;
+              
+              const dist = calculateDistance(latitude, longitude, latVal, lngVal);
+              
+              let address = "";
+              if (el.tags?.["addr:full"]) {
+                address = el.tags["addr:full"];
+              } else {
+                const street = el.tags?.["addr:street"] || "";
+                const suburb = el.tags?.["addr:suburb"] || el.tags?.["addr:neighbourhood"] || el.tags?.["addr:neighborhood"] || "";
+                const city = el.tags?.["addr:city"] || "";
+                address = [street, suburb, city].filter(Boolean).join(", ") || (lang === 'hi' ? "नजदीकी क्षेत्र" : "Nearby area");
+              }
+              
+              const phone = el.tags?.phone || el.tags?.["contact:phone"] || (lang === 'hi' ? "उपलब्ध नहीं" : "Not Available");
+              
+              return {
+                name,
+                address,
+                phone,
+                distance: parseFloat(dist),
+                lat: latVal,
+                lng: lngVal
+              };
+            });
+            
+            // Sort by nearest distance
+            hospitals.sort((a, b) => a.distance - b.distance);
+            setNearbyClinics(hospitals.slice(0, 3));
+          } else {
+            // Fallback to larger 15km search
+            const largerQuery = `[out:json][timeout:15];(node["amenity"="hospital"](around:15000,${latitude},${longitude});way["amenity"="hospital"](around:15000,${latitude},${longitude}););out center;`;
+            const responseLarger = await fetch(`https://overpass-api.de/api/interpreter?data=${encodeURIComponent(largerQuery)}`);
+            const dataLarger = await responseLarger.json();
+            
+            if (dataLarger && dataLarger.elements && dataLarger.elements.length > 0) {
+              const hospitals = dataLarger.elements.map(el => {
+                const name = el.tags?.name || "Hospital";
+                const latVal = el.lat || el.center?.lat || latitude;
+                const lngVal = el.lon || el.center?.lon || longitude;
+                const dist = calculateDistance(latitude, longitude, latVal, lngVal);
+                let address = el.tags?.["addr:full"] || [el.tags?.["addr:street"], el.tags?.["addr:suburb"]].filter(Boolean).join(", ") || "Nearby Area";
+                const phone = el.tags?.phone || el.tags?.["contact:phone"] || "Not Available";
+                return { name, address, phone, distance: parseFloat(dist), lat: latVal, lng: lngVal };
+              });
+              hospitals.sort((a, b) => a.distance - b.distance);
+              setNearbyClinics(hospitals.slice(0, 3));
+            } else {
+              setLocError(lang === 'hi' ? "15 किमी के भीतर कोई अस्पताल नहीं मिला।" : "No hospitals found within 15km. Showing national centers.");
+              setNearbyClinics(DEFAULT_TRAUMA_CENTERS.map(c => ({ ...c, distance: "N/A" })));
+            }
+          }
+        } catch (err) {
+          console.error(err);
+          setLocError(lang === 'hi' ? "जियो-डेटा प्राप्त करने में त्रुटि। मुख्य केंद्र दिखाए जा रहे हैं।" : "Error retrieving live geo-data. Showing national centers.");
+          setNearbyClinics(DEFAULT_TRAUMA_CENTERS.map(c => ({ ...c, distance: "N/A" })));
+        }
+        setLocLoading(false);
+      },
+      (error) => {
+        console.error(error);
+        setLocError(lang === 'hi' ? "लोकेशन एक्सेस की अनुमति नहीं मिली। मुख्य अस्पताल दिखाए जा रहे हैं।" : "Location access denied or unavailable. Showing national centers.");
+        setLocLoading(false);
+        setNearbyClinics(DEFAULT_TRAUMA_CENTERS.map(c => ({ ...c, distance: "N/A" })));
+      },
+      { timeout: 12000 }
+    );
+  };
+
   const toggleIceTimer = () => {
-    setIceTimerRunning(!iceTimerRunning);
+    const nextRunning = !iceTimerRunning;
+    setIceTimerRunning(nextRunning);
+    if (nextRunning) {
+      let startMsg = "Timer Started: 20 minutes cold compress active.";
+      let speechLang = "en-US";
+      if (lang === 'hi') {
+        startMsg = "आइस कम्प्रेस शुरू हो गया है। बीस मिनट का समय सक्रिय है।";
+        speechLang = "hi-IN";
+      } else if (lang === 'hn') {
+        startMsg = "Ice compress start ho gaya hai. Bees minute ka time active hai.";
+        speechLang = "hi-IN";
+      }
+      speakSafetyText(startMsg, speechLang);
+    } else {
+      let pauseMsg = "Timer paused.";
+      let speechLang = "en-US";
+      if (lang === 'hi') {
+        pauseMsg = "टाइमर रोक दिया गया है।";
+        speechLang = "hi-IN";
+      } else if (lang === 'hn') {
+        pauseMsg = "Timer pause ho gaya hai.";
+        speechLang = "hi-IN";
+      }
+      speakSafetyText(pauseMsg, speechLang);
+    }
   };
 
   const resetIceTimer = () => {
@@ -1470,6 +1994,45 @@ export default function App() {
       setTimeout(() => {
         handleSendChat(transcript);
       }, 500);
+    };
+
+    recognition.start();
+  };
+
+  const startSymptomVoiceRecognition = () => {
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SpeechRecognition) {
+      alert(lang === 'hi' ? "इस ब्राउज़र में आवाज़ पहचान समर्थित नहीं है। कृपया Google Chrome का उपयोग करें।" : "Voice recognition is not supported in this browser. Please try Google Chrome.");
+      return;
+    }
+
+    const recognition = new SpeechRecognition();
+    recognition.continuous = false;
+    recognition.interimResults = false;
+    
+    // Match locales for speech input
+    recognition.lang = lang === 'hi' ? 'hi-IN' : (lang === 'hn' ? 'hi-IN' : 'en-US');
+
+    recognition.onstart = () => {
+      setIsSymptomListening(true);
+      window.speechSynthesis.cancel();
+    };
+
+    recognition.onerror = (e) => {
+      console.error(e);
+      setIsSymptomListening(false);
+    };
+
+    recognition.onend = () => {
+      setIsSymptomListening(false);
+    };
+
+    recognition.onresult = (event) => {
+      const transcript = event.results[0][0].transcript;
+      setAnswers(prev => ({
+        ...prev,
+        customNotes: prev.customNotes ? `${prev.customNotes} ${transcript}` : transcript
+      }));
     };
 
     recognition.start();
@@ -1643,7 +2206,8 @@ CRITICAL:
       boneProtruding: false,
       numbnessBelow: false,
       blueColdBelow: false,
-      unrelivedPain: false
+      unrelivedPain: false,
+      customNotes: ''
     });
     setInjuryArea('');
     setCurrentStep(0);
@@ -2703,6 +3267,11 @@ Return your response strictly in the following JSON format:
             </select>
           </div>
 
+          {/* PWA Install Button */}
+          <button className="nav-pill nav-install" onClick={handleInstallApp} style={{ background: 'linear-gradient(135deg, #10b981, #059669)', color: 'white', fontWeight: 'bold', border: '1px solid rgba(255,255,255,0.1)' }}>
+            📥 Install App
+          </button>
+
           {/* New Assessment CTA */}
           <button className="nav-pill nav-cta" onClick={handleStartNewAssessment}>
             ✦ New Assessment
@@ -2755,6 +3324,11 @@ Return your response strictly in the following JSON format:
             <option value="hn" style={{ background: '#111d35' }}>Hinglish</option>
           </select>
         </div>
+        {/* Mobile PWA Install Button */}
+        <button className="mobile-nav-item install-cta" onClick={() => { handleInstallApp(); setMobileMenuOpen(false); }} style={{ background: 'linear-gradient(135deg, #10b981, #059669)', color: 'white', fontWeight: 'bold', border: 'none', borderRadius: '8px', padding: '0.75rem 1rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', margin: '0.5rem 1rem' }}>
+          📥 Install InjuryIQ AI
+        </button>
+
         <button className="mobile-nav-item danger" onClick={() => { handleLogout(); setMobileMenuOpen(false); }}>⎋ Logout</button>
       </div>
 
@@ -2974,33 +3548,94 @@ Return your response strictly in the following JSON format:
             {/* STEP 0: AREA SELECTION */}
             {currentStep === 0 && (
               <div className="fade-in">
-                <h3 style={{ fontSize: '1.4rem', fontWeight: 700, marginBottom: '1.5rem', textAlign: 'center' }}>{t.injuryLocationQuestion}</h3>
+                <h3 style={{ fontSize: '1.4rem', fontWeight: 700, marginBottom: '1rem', textAlign: 'center' }}>{t.injuryLocationQuestion}</h3>
                 <p style={{ textAlign: 'center', color: darkMode ? 'var(--text-secondary)' : 'var(--text-light-secondary)', marginBottom: '2rem' }}>
                   {t.selectJointSubtitle}
                 </p>
-                <div className="joint-selection-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '1rem' }}>
-                  {[
-                    { id: 'ankle', label: lang === 'hi' ? 'टखना (Ankle)' : 'Ankle (Takhna)' },
-                    { id: 'foot', label: lang === 'hi' ? 'पैर (Foot)' : 'Foot (Pair)' },
-                    { id: 'knee', label: lang === 'hi' ? 'घुटना (Knee)' : 'Knee (Ghuthna)' },
-                    { id: 'wrist', label: lang === 'hi' ? 'कलाई (Wrist)' : 'Wrist (Kalai)' }
-                  ].map((area) => (
-                    <div 
-                      key={area.id} 
-                      className={`glass-panel glass-panel-hover ${injuryArea === area.id ? 'glow-primary' : ''}`}
-                      style={{ 
-                        padding: '1.5rem', 
-                        textAlign: 'center', 
-                        cursor: 'pointer', 
-                        border: injuryArea === area.id ? '2px solid var(--primary)' : '1px solid var(--border)',
-                        background: injuryArea === area.id ? 'rgba(59,130,246,0.1)' : 'rgba(255,255,255,0.02)'
-                      }}
-                      onClick={() => setInjuryArea(area.id)}
-                    >
-                      <Activity size={24} style={{ color: injuryArea === area.id ? 'var(--primary)' : 'inherit', marginBottom: '0.5rem' }} />
-                      <div style={{ fontWeight: 600, fontSize: '1.1rem' }}>{area.label}</div>
-                    </div>
-                  ))}
+                
+                <div style={{ display: 'flex', flexDirection: window.innerWidth < 768 ? 'column' : 'row', gap: '2rem', alignItems: 'center', justifyContent: 'center' }}>
+                  {/* Interactive SVG Body Map */}
+                  <div className="glass-panel" style={{ padding: '1rem', display: 'flex', justifyContent: 'center', alignItems: 'center', background: 'rgba(255,255,255,0.01)', border: '1px solid var(--border)', borderRadius: 'var(--radius-lg)', width: '280px', height: '340px' }}>
+                    <svg width="240" height="320" viewBox="0 0 240 320" style={{ overflow: 'visible' }}>
+                      {/* Stylized Human Skeletal/Joint Connection Path */}
+                      {/* Head */}
+                      <circle cx="120" cy="35" r="16" fill="none" stroke="rgba(255,255,255,0.15)" strokeWidth="2" />
+                      <circle cx="120" cy="35" r="6" fill="rgba(255,255,255,0.1)" />
+                      
+                      {/* Spine / Torso */}
+                      <line x1="120" y1="51" x2="120" y2="140" stroke="rgba(255,255,255,0.15)" strokeWidth="2" />
+                      <line x1="90" y1="65" x2="150" y2="65" stroke="rgba(255,255,255,0.15)" strokeWidth="2" />
+                      <line x1="100" y1="140" x2="140" y2="140" stroke="rgba(255,255,255,0.15)" strokeWidth="2" />
+                      
+                      {/* Arms */}
+                      {/* Left Arm (Wrist) */}
+                      <path d="M120 65 L75 95 L55 125" fill="none" stroke="rgba(255,255,255,0.15)" strokeWidth="2" strokeLinecap="round" />
+                      {/* Right Arm */}
+                      <path d="M120 65 L165 95 L185 125" fill="none" stroke="rgba(255,255,255,0.15)" strokeWidth="2" strokeLinecap="round" />
+                      
+                      {/* Legs */}
+                      {/* Left Leg */}
+                      <path d="M100 140 L90 205 L80 270 L95 285" fill="none" stroke="rgba(255,255,255,0.15)" strokeWidth="2" strokeLinecap="round" />
+                      {/* Right Leg (Knee, Ankle, Foot) */}
+                      <path d="M140 140 L150 205 L160 270 L175 285" fill="none" stroke="rgba(255,255,255,0.15)" strokeWidth="2" strokeLinecap="round" />
+                      
+                      {/* Hotspots */}
+                      {/* 1. Wrist Hotspot (55, 125) */}
+                      <g onClick={() => setInjuryArea('wrist')} style={{ cursor: 'pointer' }}>
+                        <circle cx="55" cy="125" r="14" fill={injuryArea === 'wrist' ? 'rgba(59,130,246,0.3)' : 'rgba(255,255,255,0.05)'} stroke={injuryArea === 'wrist' ? 'var(--primary)' : 'rgba(255,255,255,0.3)'} strokeWidth="2" style={{ transition: 'all 0.2s' }} />
+                        <circle cx="55" cy="125" r="4" fill={injuryArea === 'wrist' ? 'var(--primary)' : 'rgba(255,255,255,0.6)'} />
+                        <text x="35" y="128" fill="var(--text-secondary)" fontSize="9" fontWeight="bold" textAnchor="end">Wrist</text>
+                      </g>
+
+                      {/* 2. Knee Hotspot (150, 205) */}
+                      <g onClick={() => setInjuryArea('knee')} style={{ cursor: 'pointer' }}>
+                        <circle cx="150" cy="205" r="14" fill={injuryArea === 'knee' ? 'rgba(59,130,246,0.3)' : 'rgba(255,255,255,0.05)'} stroke={injuryArea === 'knee' ? 'var(--primary)' : 'rgba(255,255,255,0.3)'} strokeWidth="2" style={{ transition: 'all 0.2s' }} />
+                        <circle cx="150" cy="205" r="4" fill={injuryArea === 'knee' ? 'var(--primary)' : 'var(--color-low-bg)'} />
+                        <text x="170" y="208" fill="var(--text-secondary)" fontSize="9" fontWeight="bold" textAnchor="start">Knee</text>
+                      </g>
+
+                      {/* 3. Ankle Hotspot (160, 270) */}
+                      <g onClick={() => setInjuryArea('ankle')} style={{ cursor: 'pointer' }}>
+                        <circle cx="160" cy="270" r="14" fill={injuryArea === 'ankle' ? 'rgba(59,130,246,0.3)' : 'rgba(255,255,255,0.05)'} stroke={injuryArea === 'ankle' ? 'var(--primary)' : 'rgba(255,255,255,0.3)'} strokeWidth="2" style={{ transition: 'all 0.2s' }} />
+                        <circle cx="160" cy="270" r="4" fill={injuryArea === 'ankle' ? 'var(--primary)' : 'var(--color-low-bg)'} />
+                        <text x="180" y="273" fill="var(--text-secondary)" fontSize="9" fontWeight="bold" textAnchor="start">Ankle</text>
+                      </g>
+
+                      {/* 4. Foot Hotspot (175, 285) */}
+                      <g onClick={() => setInjuryArea('foot')} style={{ cursor: 'pointer' }}>
+                        <circle cx="175" cy="285" r="14" fill={injuryArea === 'foot' ? 'rgba(59,130,246,0.3)' : 'rgba(255,255,255,0.05)'} stroke={injuryArea === 'foot' ? 'var(--primary)' : 'rgba(255,255,255,0.3)'} strokeWidth="2" style={{ transition: 'all 0.2s' }} />
+                        <circle cx="175" cy="285" r="4" fill={injuryArea === 'foot' ? 'var(--primary)' : 'var(--color-low-bg)'} />
+                        <text x="195" y="295" fill="var(--text-secondary)" fontSize="9" fontWeight="bold" textAnchor="start">Foot</text>
+                      </g>
+                    </svg>
+                  </div>
+                  
+                  {/* Cards Grid List */}
+                  <div className="joint-selection-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '1rem', width: window.innerWidth < 768 ? '100%' : '350px' }}>
+                    {[
+                      { id: 'ankle', label: lang === 'hi' ? 'टखना (Ankle)' : 'Ankle (Takhna)' },
+                      { id: 'foot', label: lang === 'hi' ? 'पैर (Foot)' : 'Foot (Pair)' },
+                      { id: 'knee', label: lang === 'hi' ? 'घुटना (Knee)' : 'Knee (Ghuthna)' },
+                      { id: 'wrist', label: lang === 'hi' ? 'कलाई (Wrist)' : 'Wrist (Kalai)' }
+                    ].map((area) => (
+                      <div 
+                        key={area.id} 
+                        className={`glass-panel glass-panel-hover ${injuryArea === area.id ? 'glow-primary' : ''}`}
+                        style={{ 
+                          padding: '1.25rem', 
+                          textAlign: 'center', 
+                          cursor: 'pointer', 
+                          border: injuryArea === area.id ? '2px solid var(--primary)' : '1px solid var(--border)',
+                          background: injuryArea === area.id ? 'rgba(59,130,246,0.1)' : 'rgba(255,255,255,0.02)',
+                          transition: 'all 0.2s'
+                        }}
+                        onClick={() => setInjuryArea(area.id)}
+                      >
+                        <Activity size={20} style={{ color: injuryArea === area.id ? 'var(--primary)' : 'inherit', marginBottom: '0.4rem' }} />
+                        <div style={{ fontWeight: 600, fontSize: '1rem' }}>{area.label}</div>
+                      </div>
+                    ))}
+                  </div>
                 </div>
               </div>
             )}
@@ -3046,6 +3681,69 @@ Return your response strictly in the following JSON format:
                         {opt.label}
                       </label>
                     ))}
+                  </div>
+                </div>
+
+                {/* Voice / Typing Symptom Input Section */}
+                <div style={{ marginTop: '2rem', borderTop: '1px solid var(--border)', paddingTop: '1.5rem' }}>
+                  <label style={{ display: 'block', fontWeight: 600, marginBottom: '0.75rem' }}>
+                    {t.customNotesLabel}
+                  </label>
+                  
+                  <div style={{ position: 'relative', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                    <textarea
+                      className="glass-panel"
+                      value={answers.customNotes}
+                      onChange={(e) => handleAnswerChange('customNotes', e.target.value)}
+                      placeholder={t.customNotesPlaceholder}
+                      style={{
+                        width: '100%',
+                        minHeight: '100px',
+                        padding: '0.85rem',
+                        fontSize: '0.95rem',
+                        lineHeight: '1.5',
+                        color: 'inherit',
+                        background: 'rgba(255, 255, 255, 0.01)',
+                        border: '1px solid var(--border)',
+                        borderRadius: 'var(--radius-md)',
+                        resize: 'vertical',
+                        outline: 'none',
+                        transition: 'border-color 0.2s, box-shadow 0.2s'
+                      }}
+                    />
+                    
+                    <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: '0.75rem' }}>
+                      {/* Listening pulse/indicator */}
+                      {isSymptomListening && (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.8rem', color: 'var(--color-emergency)' }}>
+                          <span className="pulse" style={{ display: 'inline-block', width: '8px', height: '8px', borderRadius: '50%', backgroundColor: 'var(--color-emergency)' }} />
+                          <span>{t.speakBtnListening}</span>
+                        </div>
+                      )}
+                      
+                      <button
+                        type="button"
+                        onClick={startSymptomVoiceRecognition}
+                        className={`btn ${isSymptomListening ? 'glow-emergency' : 'btn-secondary'}`}
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '0.4rem',
+                          padding: '0.5rem 1rem',
+                          fontSize: '0.85rem',
+                          backgroundColor: isSymptomListening ? 'rgba(239, 68, 68, 0.2)' : 'rgba(255, 255, 255, 0.05)',
+                          color: isSymptomListening ? 'var(--color-emergency)' : 'inherit',
+                          border: isSymptomListening ? '1px solid var(--color-emergency)' : '1px solid var(--border)',
+                          borderRadius: '30px',
+                          cursor: 'pointer',
+                          transition: 'all 0.2s',
+                          animation: isSymptomListening ? 'pulseMic 1.2s infinite' : 'none'
+                        }}
+                      >
+                        {isSymptomListening ? <MicOff size={16} /> : <Mic size={16} />}
+                        <span>{isSymptomListening ? t.speakBtnListening.split('...')[0] : t.speakBtnStart}</span>
+                      </button>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -4058,6 +4756,18 @@ Return your response strictly in the following JSON format:
       {view === 'details' && selectedHistoryItem && (
         <div className="slide-in fade-in" style={{ maxWidth: '900px', margin: '0 auto' }}>
           
+          {/* Clinical Print-Only Header */}
+          <div className="clinical-print-header">
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <h1 style={{ fontSize: '1.8rem', fontWeight: 800 }}>InjuryIQ Clinical Triage Report</h1>
+              <span style={{ fontSize: '0.85rem', color: '#64748b', fontWeight: 'bold' }}>CONFIDENTIAL REPORT</span>
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '0.5rem', fontSize: '0.85rem', color: '#475569', borderBottom: '2px solid #0f172a', paddingBottom: '0.5rem', marginBottom: '1.5rem' }}>
+              <span>Patient Name: {currentUser ? currentUser.displayName : 'Guest User'} ({currentUser ? currentUser.email : ''})</span>
+              <span>Generated On: {new Date().toLocaleString()}</span>
+            </div>
+          </div>
+
           <div className="report-header-controls">
             <button className="btn btn-secondary" onClick={() => setView(history.includes(selectedHistoryItem) ? 'history' : 'dashboard')}>
               <ChevronLeft size={16} /> {t.backToRecords}
@@ -4113,7 +4823,27 @@ Return your response strictly in the following JSON format:
             </div>
           </div>
 
-          <div className="dashboard-grid">
+          {/* Tab Selector for Triage Report vs Smart Remedies */}
+          <div className="tabs-header hide-on-print" style={{ display: 'flex', gap: '0.5rem', marginBottom: '1.5rem', borderBottom: '1px solid var(--border)', paddingBottom: '0.5rem' }}>
+            <button 
+              className={`nav-pill ${remedyTab === 'assessment' ? 'active' : ''}`} 
+              onClick={() => setRemedyTab('assessment')}
+              style={{ padding: '0.6rem 1.2rem', fontSize: '0.9rem' }}
+            >
+              📋 {lang === 'hi' ? "क्लिनिकल रिपोर्ट" : lang === 'hn' ? "Clinical Report" : "Clinical Triage Report"}
+            </button>
+            <button 
+              className={`nav-pill ${remedyTab === 'remedies' ? 'active' : ''}`} 
+              onClick={() => setRemedyTab('remedies')}
+              style={{ padding: '0.6rem 1.2rem', fontSize: '0.9rem', background: remedyTab === 'remedies' ? 'linear-gradient(135deg, #10b981, #059669)' : 'rgba(255,255,255,0.05)', color: 'white' }}
+            >
+              🌿 {lang === 'hi' ? "स्मार्ट उपचार और दवा गाइड" : lang === 'hn' ? "Smart Remedy & Care Guide" : "Smart Remedy & Care Guide"}
+            </button>
+          </div>
+
+          {remedyTab === 'assessment' && (
+            <>
+              <div className="dashboard-grid">
             <div>
               <div 
                 className="glass-panel" 
@@ -4212,6 +4942,19 @@ Return your response strictly in the following JSON format:
                     </div>
                   </div>
                 )}
+
+                {/* Patient Own Words Notes */}
+                {selectedHistoryItem.symptoms?.customNotes && (
+                  <div style={{ borderTop: '1px solid rgba(255,255,255,0.08)', marginTop: '1.5rem', paddingTop: '1.5rem' }}>
+                    <div style={{ fontWeight: 600, marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                      <MessageSquare size={16} style={{ color: 'var(--primary)' }} />
+                      {lang === 'hi' ? "रोगी का विवरण (आवाज़/लिखा हुआ):" : lang === 'hn' ? "Patient's description (Voice/Typed):" : "Patient Description (Voice/Typed):"}
+                    </div>
+                    <div className="glass-panel" style={{ padding: '1rem', fontStyle: 'italic', fontSize: '0.9rem', color: 'var(--text-secondary)', background: 'rgba(255,255,255,0.01)', textAlign: 'left', lineHeight: '1.5' }}>
+                      "{selectedHistoryItem.symptoms.customNotes}"
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
 
@@ -4266,6 +5009,53 @@ Return your response strictly in the following JSON format:
                 </div>
               )}
 
+              {/* Nutritional Recovery Card */}
+              <div className="glass-panel" style={{ padding: '1.5rem', marginTop: '0.5rem', marginBottom: '1rem', borderLeft: '4px solid #34d399' }}>
+                <h4 style={{ margin: '0 0 0.75rem 0', display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#34d399' }}>
+                  🥦 {lang === 'hi' ? "पोषण और आहार गाइड" : (lang === 'hn' ? "Nutritional Recovery Guide" : "Bone & Joint Healing Nutrition")}
+                </h4>
+                
+                {(() => {
+                  const area = selectedHistoryItem.injuryArea;
+                  
+                  let foods = [];
+                  let primaryNutrient = "";
+                  let tip = "";
+
+                  if (area === 'knee' || area === 'ankle') {
+                    primaryNutrient = lang === 'hi' ? "कैल्शियम और विटामिन D (हड्डी रिकवरी)" : "Calcium & Vitamin D (Bone Stress)";
+                    foods = lang === 'hi' 
+                      ? ["दूध और डेयरी उत्पाद (दूध, दही, पनीर)", "हरी पत्तेदार सब्जियां (पालक, मेथी)", "सूरजमुखी के बीज और बादाम", "रागी का आटा"] 
+                      : ["Grass-fed Dairy (Milk, Yogurt, Paneer)", "Dark Leafy Greens (Spinach, Broccoli)", "Almonds & Sesame seeds", "Ragi (Finger millet) porridge"];
+                    tip = lang === 'hi' 
+                      ? "हड्डियों को मजबूत रखने के लिए प्रतिदिन सुबह 15 मिनट हल्की धूप लें।" 
+                      : "Spend 15 mins in soft morning sunlight to naturally synthesize Vitamin D3.";
+                  } else {
+                    primaryNutrient = lang === 'hi' ? "कोलेजन और विटामिन C (लिगामेंट/टिशू रिपेयर)" : "Collagen & Vitamin C (Tissue Repair)";
+                    foods = lang === 'hi'
+                      ? ["खट्टे फल (संतरा, आंवला, नींबू)", "हल्दी वाला दूध (सूजन कम करने के लिए)", "पपीता और कीवी फल", "अदरक-तुलसी की चाय"]
+                      : ["Vitamin C Rich Citrus (Oranges, Amla, Lemon)", "Turmeric Milk (Haldi Doodh - Anti-inflammatory)", "Ginger-Basil Herbal Tea", "Papaya & Chia Seeds"];
+                    tip = lang === 'hi'
+                      ? "हल्दी में मौजूद करक्यूमिन जोड़ों की सूजन और दर्द को तेजी से कम करता है।"
+                      : "Curcumin in Turmeric acts as a potent anti-inflammatory agent for joint swells.";
+                  }
+
+                  return (
+                    <div style={{ fontSize: '0.85rem', lineHeight: '1.4' }}>
+                      <div style={{ fontWeight: 'bold', color: 'var(--text-primary)', marginBottom: '0.5rem' }}>
+                        {primaryNutrient}
+                      </div>
+                      <ul style={{ margin: '0 0 0.75rem 0', paddingLeft: '1.2rem', color: 'var(--text-secondary)' }}>
+                        {foods.map((food, idx) => <li key={idx} style={{ marginBottom: '0.25rem' }}>{food}</li>)}
+                      </ul>
+                      <div style={{ background: 'rgba(52, 211, 153, 0.05)', padding: '0.75rem', borderRadius: '6px', fontSize: '0.75rem', color: 'var(--text-secondary)', border: '1px solid rgba(52, 211, 153, 0.15)', fontStyle: 'italic' }}>
+                        💡 <strong>{lang === 'hi' ? "डॉक्टर की सलाह:" : "Triage Tip:"}</strong> {tip}
+                      </div>
+                    </div>
+                  );
+                })()}
+              </div>
+
               {/* AI Doctor Consultation Disclaimer */}
               <div className="glass-panel" style={{ padding: '1rem 1.5rem', background: 'rgba(99,102,241,0.08)', border: '1px solid rgba(99,102,241,0.3)', borderRadius: '12px', display: 'flex', alignItems: 'center', gap: '0.75rem', marginTop: '0.5rem' }}>
                 <span style={{ fontSize: '1.5rem', flexShrink: 0 }}>🤖</span>
@@ -4274,10 +5064,325 @@ Return your response strictly in the following JSON format:
                   {lang === 'hi' ? 'यह रिपोर्ट AI-आधारित नियमों से तैयार की गई है। सटीक निदान के लिए कृपया एक बार योग्य डॉक्टर से परामर्श अवश्य लें।' : lang === 'hn' ? 'Yeh report AI-assisted clinical rules se bani hai. Sahi diagnosis ke liye ek baar doctor se zaroor milein.' : 'This report is generated using AI-assisted clinical rules. Please consult a qualified doctor at least once for accurate medical diagnosis.'}
                 </p>
               </div>
+
+              {/* Trauma Center Locator Widget */}
+              {['HIGH', 'EMERGENCY'].includes(selectedHistoryItem.riskLevel) && (
+                <div className="glass-panel hide-on-print" style={{ padding: '1.5rem', marginTop: '1.5rem', border: '1px solid rgba(239, 68, 68, 0.3)', background: 'rgba(239, 68, 68, 0.05)' }}>
+                  <h4 style={{ margin: '0 0 0.5rem 0', color: 'var(--color-emergency)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                    🚨 {lang === 'hi' ? "आपातकालीन ट्रॉमा सेंटर लोकेटर" : (lang === 'hn' ? "Emergency Trauma Center Locator" : "Emergency Trauma Center Locator")}
+                  </h4>
+                  <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '1rem', lineHeight: 1.5 }}>
+                    {lang === 'hi' 
+                      ? "चोट गंभीर लग रही है। कृपया तुरंत नजदीकी अस्पताल या आर्थोपेडिक विभाग में जाएं।" 
+                      : (lang === 'hn' ? "Injury severe lag rahi hai. Kripya turant pass ke hospital ya orthopedic ward me jayein." : "High risk of fracture or joint trauma. We strongly recommend immediate professional evaluation at a nearby emergency facility.")}
+                  </p>
+
+                  {nearbyClinics.length === 0 ? (
+                    <button 
+                      className="btn btn-primary glow-primary" 
+                      style={{ background: 'var(--color-emergency)', border: 'none', width: '100%', padding: '0.65rem' }}
+                      onClick={handleFindClinics}
+                      disabled={locLoading}
+                    >
+                      {locLoading 
+                        ? (lang === 'hi' ? "स्थान खोज रहे हैं..." : "Locating nearest...") 
+                        : (lang === 'hi' ? "नजदीकी ट्रॉमा सेंटर खोजें" : (lang === 'hn' ? "Nearby Trauma Centers Dhoondein" : "Find Nearby Emergency Clinics"))}
+                    </button>
+                  ) : (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', marginTop: '1rem' }}>
+                      {locError && <div style={{ fontSize: '0.75rem', color: 'var(--color-moderate)', marginBottom: '0.5rem' }}>{locError}</div>}
+                      {nearbyClinics.map((clinic, idx) => (
+                        <div key={idx} className="glass-panel" style={{ padding: '0.75rem', background: 'rgba(0,0,0,0.2)', fontSize: '0.8rem', border: '1px solid rgba(255,255,255,0.05)', borderRadius: '6px' }}>
+                          <div style={{ fontWeight: 'bold', fontSize: '0.85rem', color: '#fca5a5', display: 'flex', justifyContent: 'space-between' }}>
+                            <span>{clinic.name}</span>
+                            {clinic.distance !== "N/A" && <span style={{ color: 'var(--primary)' }}>{clinic.distance} km</span>}
+                          </div>
+                          <div style={{ color: 'var(--text-secondary)', marginTop: '0.25rem', fontSize: '0.75rem' }}>{clinic.address}</div>
+                          <div style={{ color: 'var(--text-secondary)', fontSize: '0.75rem' }}>Phone: {clinic.phone}</div>
+                          <div style={{ marginTop: '0.5rem', display: 'flex', gap: '0.5rem' }}>
+                            <a 
+                              href={clinic.lat && clinic.lng ? `https://www.google.com/maps/dir/?api=1&destination=${clinic.lat},${clinic.lng}` : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(clinic.name + " " + clinic.address)}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="btn btn-secondary"
+                              style={{ padding: '0.25rem 0.5rem', fontSize: '0.75rem', textDecoration: 'none', background: 'rgba(59, 130, 246, 0.1)', color: '#60a5fa', display: 'inline-flex', alignItems: 'center', gap: '0.25rem', border: '1px solid rgba(59, 130, 246, 0.3)' }}
+                            >
+                              🗺️ {lang === 'hi' ? "दिशा-निर्देश" : "Directions"}
+                            </a>
+                            <a 
+                              href={`tel:${clinic.phone}`}
+                              className="btn btn-secondary"
+                              style={{ padding: '0.25rem 0.5rem', fontSize: '0.75rem', textDecoration: 'none', color: '#34d399', display: 'inline-flex', alignItems: 'center', gap: '0.25rem', border: '1px solid rgba(52, 211, 153, 0.3)' }}
+                            >
+                              📞 {lang === 'hi' ? "कॉल" : "Call"}
+                            </a>
+                          </div>
+                        </div>
+                      ))}
+                      <button 
+                        className="btn btn-secondary" 
+                        style={{ fontSize: '0.75rem', padding: '0.35rem' }}
+                        onClick={handleFindClinics}
+                      >
+                        🔄 {lang === 'hi' ? "पुनः खोजें" : "Refresh Location"}
+                      </button>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
+          </div>
+
+          {/* Clinical Print-Only Footer */}
+          <div className="clinical-print-footer">
+            <p style={{ fontStyle: 'italic', color: '#475569', lineHeight: 1.5, margin: 0 }}>
+              <strong>Disclaimer:</strong> This report is generated based on automated clinical decision support rules (incorporating Ottawa Rules for ankle, foot, and knee, and clinical scaphoid criteria for wrist injuries) and patient inputs. It is for informational and educational triage guidance, NOT a definitive diagnosis. If symptoms persist, seek hands-on orthopedic care.
+            </p>
+            <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '2.5rem', fontSize: '0.85rem' }}>
+              <span>Verified System Output — Patient ID Hash: {currentUser ? btoa(currentUser.email).substring(0, 12) : 'N/A'}</span>
+              <span style={{ borderTop: '1px solid #475569', width: '220px', textAlign: 'center', paddingTop: '0.25rem', fontWeight: 'bold' }}>Consulting Doctor Signature</span>
+            </div>
+          </div>
+        </>
+      )}
+
+      {remedyTab === 'remedies' && (
+        <div className="remedies-dashboard fade-in" style={{ padding: '0.5rem 0' }}>
+          {/* Banned HUD Warning Banner */}
+          {getRemediesData(selectedHistoryItem.riskLevel.toLowerCase()).banned.length > 0 && (
+            <div className="banned-actions-hud" style={{ padding: '1.5rem', background: 'rgba(239, 68, 68, 0.08)', border: '1px solid rgba(239, 68, 68, 0.25)', borderRadius: '12px', marginBottom: '2rem', animation: 'crimsonFlash 3s infinite alternate' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', color: '#f87171', fontWeight: 800, fontSize: '1.1rem', marginBottom: '0.75rem' }}>
+                <span>🚨</span>
+                <span>{lang === 'hi' ? 'वर्जित गतिविधियां (Strict Restrictions)' : (lang === 'hn' ? 'Strictly Banned Actions!' : 'Medical Warning: Strictly Banned Actions')}</span>
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                {getRemediesData(selectedHistoryItem.riskLevel.toLowerCase()).banned.map((b, idx) => (
+                  <div key={idx} style={{ fontSize: '0.9rem', color: '#cbd5e1' }}>
+                    <strong style={{ color: '#f87171' }}>✕ {b.title}:</strong> {b.desc}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Main Virtual First-Aid Cabinet */}
+          <div className="glass-panel" style={{ padding: '2rem', marginBottom: '2rem', textAlign: 'center', position: 'relative', overflow: 'hidden' }}>
+            <h3 style={{ fontSize: '1.4rem', fontWeight: 800, margin: '0 0 1.5rem', background: 'linear-gradient(135deg, #10b981, #6ee7b7)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
+              💼 {lang === 'hi' ? 'वर्चुअल फर्स्ट-एड बॉक्स' : (lang === 'hn' ? 'Virtual First-Aid Box' : 'Virtual First-Aid Cabinet')}
+            </h3>
+            
+            {/* Cabinet Drawers Selection */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', maxWidth: '400px', margin: '0 auto' }}>
+              <button 
+                onClick={() => setActiveDrawer('medicines')}
+                className={`cabinet-drawer-btn ${activeDrawer === 'medicines' ? 'active' : ''}`}
+                style={{ 
+                  padding: '1rem', 
+                  background: activeDrawer === 'medicines' ? 'rgba(59, 130, 246, 0.15)' : 'rgba(255, 255, 255, 0.02)',
+                  border: activeDrawer === 'medicines' ? '1px solid var(--primary)' : '1px solid rgba(255, 255, 255, 0.05)',
+                  borderRadius: '12px',
+                  color: activeDrawer === 'medicines' ? 'white' : 'var(--text-secondary)',
+                  cursor: 'pointer',
+                  fontWeight: 'bold',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  transition: 'all 0.3s ease'
+                }}
+              >
+                <span>💊 {lang === 'hi' ? 'प्राथमिक दवाएं (OTC Medicines)' : (lang === 'hn' ? 'Safe OTC Medicines' : 'Safe OTC Medicines')}</span>
+                <span style={{ fontSize: '0.8rem', opacity: activeDrawer === 'medicines' ? 1 : 0.5 }}>
+                  {activeDrawer === 'medicines' ? '📂 Open' : '📁 Closed'}
+                </span>
+              </button>
+
+              <button 
+                onClick={() => setActiveDrawer('ayurveda')}
+                className={`cabinet-drawer-btn ${activeDrawer === 'ayurveda' ? 'active' : ''}`}
+                style={{ 
+                  padding: '1rem', 
+                  background: activeDrawer === 'ayurveda' ? 'rgba(16, 185, 129, 0.15)' : 'rgba(255, 255, 255, 0.02)',
+                  border: activeDrawer === 'ayurveda' ? '1px solid #10b981' : '1px solid rgba(255, 255, 255, 0.05)',
+                  borderRadius: '12px',
+                  color: activeDrawer === 'ayurveda' ? 'white' : 'var(--text-secondary)',
+                  cursor: 'pointer',
+                  fontWeight: 'bold',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  transition: 'all 0.3s ease'
+                }}
+              >
+                <span>🌿 {lang === 'hi' ? 'घरेलू उपचार और लेप (Ayurvedic)' : (lang === 'hn' ? 'Gharelu Nuskhe & Leps' : 'Ayurvedic & Home Remedies')}</span>
+                <span style={{ fontSize: '0.8rem', opacity: activeDrawer === 'ayurveda' ? 1 : 0.5 }}>
+                  {activeDrawer === 'ayurveda' ? '📂 Open' : '📁 Closed'}
+                </span>
+              </button>
+
+              <button 
+                onClick={() => setActiveDrawer('supports')}
+                className={`cabinet-drawer-btn ${activeDrawer === 'supports' ? 'active' : ''}`}
+                style={{ 
+                  padding: '1rem', 
+                  background: activeDrawer === 'supports' ? 'rgba(245, 158, 11, 0.15)' : 'rgba(255, 255, 255, 0.02)',
+                  border: activeDrawer === 'supports' ? '1px solid #f59e0b' : '1px solid rgba(255, 255, 255, 0.05)',
+                  borderRadius: '12px',
+                  color: activeDrawer === 'supports' ? 'white' : 'var(--text-secondary)',
+                  cursor: 'pointer',
+                  fontWeight: 'bold',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  transition: 'all 0.3s ease'
+                }}
+              >
+                <span>🩹 {lang === 'hi' ? 'कम्प्रेसन और जॉइंट सपोर्ट' : (lang === 'hn' ? 'Compression & Braces' : 'Supports & Bandages')}</span>
+                <span style={{ fontSize: '0.8rem', opacity: activeDrawer === 'supports' ? 1 : 0.5 }}>
+                  {activeDrawer === 'supports' ? '📂 Open' : '📁 Closed'}
+                </span>
+              </button>
+            </div>
+          </div>
+
+          {/* Drawer Content Section */}
+          <div className="drawer-content-container fade-in">
+            {/* 1. Medicines Drawer */}
+            {activeDrawer === 'medicines' && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                {getRemediesData(selectedHistoryItem.riskLevel.toLowerCase()).medicines.map((med) => (
+                  <div key={med.id} className="glass-panel" style={{ padding: '1.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem', borderLeft: '4px solid var(--primary)' }}>
+                    <div style={{ flex: 1, minWidth: '250px' }}>
+                      <h4 style={{ margin: '0 0 0.5rem 0', color: '#f8fafc', fontSize: '1.05rem', fontWeight: 700 }}>{med.name}</h4>
+                      <p style={{ margin: 0, fontSize: '0.88rem', color: 'var(--text-secondary)', lineHeight: '1.4' }}>{med.desc}</p>
+                    </div>
+                    <button 
+                      onClick={() => handleAddRemedyReminder(med.name)}
+                      className="btn btn-secondary" 
+                      style={{ padding: '0.5rem 1rem', fontSize: '0.8rem', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.08)' }}
+                    >
+                      ⏰ {lang === 'hi' ? 'रिमाइंडर जोड़ें' : (lang === 'hn' ? 'Reminder Add Karein' : 'Add Reminder')}
+                    </button>
+                  </div>
+                ))}
+                {getRemediesData(selectedHistoryItem.riskLevel.toLowerCase()).medicines.length === 0 && (
+                  <div style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-secondary)' }}>
+                    {lang === 'hi' ? 'इस रिस्क लेवल के लिए कोई विशेष दवा अनुशंसित नहीं है।' : 'No medicines required/recommended for this risk level.'}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* 2. Ayurveda Drawer */}
+            {activeDrawer === 'ayurveda' && (
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '1.5rem' }}>
+                {getRemediesData(selectedHistoryItem.riskLevel.toLowerCase()).ayurveda.map((remedy) => (
+                  <div key={remedy.id} className="remedy-recipe-card glass-panel" style={{ padding: '2rem', borderLeft: '4px solid #10b981', position: 'relative' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '1rem', marginBottom: '1.5rem' }}>
+                      <div>
+                        <span className="badge badge-low" style={{ marginBottom: '0.5rem', background: 'rgba(16, 185, 129, 0.1)', color: '#10b981', border: '1px solid rgba(16,185,129,0.2)' }}>
+                          🌿 Ayurvedic Remedy
+                        </span>
+                        <h4 style={{ margin: 0, fontSize: '1.35rem', color: '#f8fafc', fontWeight: 800 }}>{remedy.name}</h4>
+                      </div>
+                      
+                      <div style={{ display: 'flex', gap: '0.7rem' }}>
+                        <span style={{ fontSize: '0.82rem', padding: '0.35rem 0.75rem', borderRadius: '20px', background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.05)', color: 'var(--text-secondary)' }}>
+                          ⏱️ {remedy.prepTime}
+                        </span>
+                        <button 
+                          onClick={() => handleAddRemedyReminder(remedy.name)}
+                          className="btn btn-secondary" 
+                          style={{ padding: '0.4rem 0.9rem', fontSize: '0.8rem', borderRadius: '8px', border: '1px solid rgba(16,185,129,0.2)', color: '#10b981' }}
+                        >
+                          ⏰ {lang === 'hi' ? 'रिमाइंडर जोड़ें' : 'Add Reminder'}
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Ingredients Checklist */}
+                    <div style={{ marginBottom: '1.5rem' }}>
+                      <h5 style={{ margin: '0 0 0.75rem 0', color: '#cbd5e1', fontSize: '0.95rem', fontWeight: 700 }}>🥣 Ingredients:</h5>
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '0.5rem' }}>
+                        {remedy.ingredients.map((ing, idx) => {
+                          const checkKey = `${remedy.id}_${idx}`;
+                          return (
+                            <label key={idx} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', fontSize: '0.88rem', color: completedRemedies[checkKey] ? 'var(--text-muted)' : 'var(--text-secondary)', textDecoration: completedRemedies[checkKey] ? 'line-through' : 'none' }}>
+                              <input 
+                                type="checkbox" 
+                                checked={!!completedRemedies[checkKey]} 
+                                onChange={(e) => {
+                                  setCompletedRemedies({
+                                    ...completedRemedies,
+                                    [checkKey]: e.target.checked
+                                  });
+                                }}
+                                style={{ width: '16px', height: '16px', accentColor: '#10b981', cursor: 'pointer' }}
+                              />
+                              <span>{ing}</span>
+                            </label>
+                          );
+                        })}
+                      </div>
+                    </div>
+
+                    {/* Steps List */}
+                    <div>
+                      <h5 style={{ margin: '0 0 0.75rem 0', color: '#cbd5e1', fontSize: '0.95rem', fontWeight: 700 }}>📋 Preparation & Use:</h5>
+                      <ol style={{ margin: 0, paddingLeft: '1.2rem', display: 'flex', flexDirection: 'column', gap: '0.5rem', fontSize: '0.88rem', color: 'var(--text-secondary)', lineHeight: '1.5' }}>
+                        {remedy.steps.map((step, idx) => (
+                          <li key={idx}>{step}</li>
+                        ))}
+                      </ol>
+                    </div>
+                  </div>
+                ))}
+                {getRemediesData(selectedHistoryItem.riskLevel.toLowerCase()).ayurveda.length === 0 && (
+                  <div className="glass-panel" style={{ textAlign: 'center', padding: '3rem', color: '#cbd5e1', border: '1px solid rgba(239,68,68,0.15)', background: 'rgba(239, 68, 68, 0.02)' }}>
+                    <div style={{ fontSize: '2.5rem', marginBottom: '1rem' }}>⚠️</div>
+                    <h4 style={{ margin: '0 0 0.5rem 0', color: '#f87171', fontWeight: 700 }}>
+                      {lang === 'hi' ? 'घरेलू उपचार वर्जित हैं!' : 'Home Remedies Prohibited!'}
+                    </h4>
+                    <p style={{ margin: 0, fontSize: '0.88rem', color: 'var(--text-secondary)', maxWidth: '450px', margin: '0 auto', lineHeight: '1.5' }}>
+                      {lang === 'hi' 
+                        ? 'टूटे हुए जोड़ या गंभीर फ्रैक्चर के संदेह में कोई भी लेप या तेल की मालिश करना अत्यंत हानिकारक हो सकता है। कृपया तुरंत डॉक्टर से संपर्क करें।' 
+                        : 'Applying herbal pastes or heating compresses is strictly prohibited for suspected fractures as it can worsen bone displacement.'}
+                    </p>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* 3. Supports Drawer */}
+            {activeDrawer === 'supports' && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                {getRemediesData(selectedHistoryItem.riskLevel.toLowerCase()).supports.map((sup) => (
+                  <div key={sup.id} className="glass-panel" style={{ padding: '1.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem', borderLeft: '4px solid #f59e0b' }}>
+                    <div style={{ flex: 1, minWidth: '250px' }}>
+                      <h4 style={{ margin: '0 0 0.5rem 0', color: '#f8fafc', fontSize: '1.05rem', fontWeight: 700 }}>{sup.name}</h4>
+                      <p style={{ margin: 0, fontSize: '0.88rem', color: 'var(--text-secondary)', lineHeight: '1.4' }}>{sup.desc}</p>
+                    </div>
+                    <button 
+                      onClick={() => handleAddRemedyReminder(sup.name)}
+                      className="btn btn-secondary" 
+                      style={{ padding: '0.5rem 1rem', fontSize: '0.8rem', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.08)', color: '#f59e0b' }}
+                    >
+                      ⏰ {lang === 'hi' ? 'रिमाइंडर जोड़ें' : 'Add Reminder'}
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Bottom Disclaimer */}
+          <div style={{ marginTop: '3rem', padding: '1rem', background: 'rgba(255,255,255,0.01)', border: '1px solid var(--border)', borderRadius: '8px', display: 'flex', alignItems: 'center', gap: '0.75rem', fontSize: '0.8rem', color: 'var(--text-secondary)', textAlign: 'left' }}>
+            <span>🛡️</span>
+            <span><strong>Disclaimer:</strong> {lang === 'hi' ? 'यह जानकारी केवल प्राथमिक सहायता और कॉलेज प्रोजेक्ट प्रस्तुति के लिए है। किसी भी गंभीर चोट में चिकित्सकीय परामर्श अत्यंत आवश्यक है।' : 'This advice is strictly for first-aid educational support. Consult an orthopedic doctor immediately for any physical injuries.'}</span>
           </div>
         </div>
       )}
+    </div>
+  )}
 
       {/* --- SCREEN 6: GENERAL HISTORY LIST --- */}
       {view === 'history' && (
@@ -4357,6 +5462,31 @@ Return your response strictly in the following JSON format:
 
       {/* --- SCREEN 7: RECOVERY TRACKING DASHBOARD --- */}
       {view === 'recovery' && (() => {
+        const getCalendarDays = () => {
+          const now = new Date();
+          const year = now.getFullYear();
+          const month = now.getMonth();
+          const firstDay = new Date(year, month, 1).getDay();
+          const totalDays = new Date(year, month + 1, 0).getDate();
+          const days = [];
+          for (let i = 0; i < firstDay; i++) {
+            days.push(null);
+          }
+          for (let d = 1; d <= totalDays; d++) {
+            days.push(new Date(year, month, d));
+          }
+          return days;
+        };
+
+        const getLogForDate = (dateObj) => {
+          if (!dateObj) return null;
+          const y = dateObj.getFullYear();
+          const m = (dateObj.getMonth() + 1).toString().padStart(2, '0');
+          const d = dateObj.getDate().toString().padStart(2, '0');
+          const dateStr = `${y}-${m}-${d}`;
+          return sortedLogs.find(log => log.date === dateStr);
+        };
+
         const REHAB_EXERCISES = {
           ankle: [
             {
@@ -4712,6 +5842,17 @@ Return your response strictly in the following JSON format:
               >
                 {lang === 'hi' ? "फिजियोथेरेपी व्यायाम गाइड" : (lang === 'hn' ? "Physiotherapy Exercise Guide" : "Physiotherapy Exercise Guide")}
               </button>
+              <button 
+                className={`btn ${recoverySubTab === 'goniometer' ? 'btn-primary' : 'btn-secondary'}`}
+                style={{ padding: '0.5rem 1rem', fontSize: '0.85rem' }}
+                onClick={() => {
+                  setRecoverySubTab('goniometer');
+                  setActiveExercise(null);
+                  setRehabTimerRunning(false);
+                }}
+              >
+                {lang === 'hi' ? "मोबिलिटी टेस्ट (ROM)" : (lang === 'hn' ? "Mobility Test (ROM)" : "Mobility Test (ROM)")}
+              </button>
             </div>
 
             {recoverySubTab === 'stats' && (
@@ -4793,89 +5934,191 @@ Return your response strictly in the following JSON format:
                 </div>
 
                 <div className="glass-panel" style={{ padding: '1.5rem', marginBottom: '2rem' }}>
-                  <h3 style={{ fontSize: '1.2rem', marginBottom: '1rem' }}>
-                    {lang === 'hi' ? "दर्द का स्तर ग्राफ (Pain Trend)" : (lang === 'hn' ? "Pain Level Trend (0-10)" : "Pain Level Trend Over Time")}
+                  <h3 style={{ fontSize: '1.2rem', marginBottom: '0.5rem' }}>
+                    {lang === 'hi' ? "रिकवरी प्रोग्रेस चार्ट (Recovery Trend Chart)" : (lang === 'hn' ? "Pain & Swelling Recovery Trend" : "Recovery Progress: Pain vs Swelling")}
                   </h3>
+
+                  {/* Chart Legend */}
+                  <div style={{ display: 'flex', gap: '1.5rem', marginBottom: '1.25rem', fontSize: '0.85rem', flexWrap: 'wrap' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                      <span style={{ display: 'inline-block', width: '12px', height: '3px', background: '#ef4444', borderRadius: '2px' }}></span>
+                      <span style={{ color: 'var(--text-secondary)', fontWeight: 600 }}>
+                        {lang === 'hi' ? 'दर्द का स्तर (0-10)' : (lang === 'hn' ? 'Pain Level (0-10)' : 'Pain Level (0-10)')}
+                      </span>
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                      <span style={{ display: 'inline-block', width: '12px', height: '3px', background: '#3b82f6', borderRadius: '2px', borderStyle: 'dashed', borderWidth: '1px' }}></span>
+                      <span style={{ color: 'var(--text-secondary)', fontWeight: 600 }}>
+                        {lang === 'hi' ? 'सूजन का स्तर (None-Severe)' : (lang === 'hn' ? 'Swelling Level (None-Sev)' : 'Swelling Level (None-Sev)')}
+                      </span>
+                    </div>
+                  </div>
                   
                   {(() => {
                     const width = 600;
                     const height = 250;
-                    const paddingX = 50;
+                    const paddingX = 55;
                     const paddingY = 30;
                     const plotWidth = width - 2 * paddingX;
                     const plotHeight = height - 2 * paddingY;
                     const N = sortedLogs.length;
 
-                    const points = sortedLogs.map((log, idx) => {
+                    const getSwellingNum = (sw) => {
+                      if (sw === 'severe') return 3;
+                      if (sw === 'moderate') return 2;
+                      if (sw === 'mild') return 1;
+                      return 0;
+                    };
+
+                    const painPoints = sortedLogs.map((log, idx) => {
                       const x = N > 1 ? paddingX + (idx * plotWidth) / (N - 1) : paddingX + plotWidth / 2;
                       const y = paddingY + plotHeight - (log.painLevel * plotHeight) / 10;
                       return { x, y, log };
                     });
 
-                    let linePath = "";
-                    points.forEach((pt, idx) => {
+                    const swellingPoints = sortedLogs.map((log, idx) => {
+                      const x = N > 1 ? paddingX + (idx * plotWidth) / (N - 1) : paddingX + plotWidth / 2;
+                      const swellVal = getSwellingNum(log.swelling);
+                      const y = paddingY + plotHeight - ((swellVal * 10 / 3) * plotHeight) / 10;
+                      return { x, y, log, swellVal };
+                    });
+
+                    let painLinePath = "";
+                    painPoints.forEach((pt, idx) => {
                       if (idx === 0) {
-                        linePath += `M ${pt.x} ${pt.y}`;
+                        painLinePath += `M ${pt.x} ${pt.y}`;
                       } else {
-                        linePath += ` L ${pt.x} ${pt.y}`;
+                        painLinePath += ` L ${pt.x} ${pt.y}`;
                       }
                     });
 
-                    let areaPath = "";
-                    if (points.length > 0) {
-                      const firstX = points[0].x;
-                      const lastX = points[points.length - 1].x;
-                      areaPath = `${linePath} L ${lastX} ${paddingY + plotHeight} L ${firstX} ${paddingY + plotHeight} Z`;
+                    let painAreaPath = "";
+                    if (painPoints.length > 0) {
+                      const firstX = painPoints[0].x;
+                      const lastX = painPoints[painPoints.length - 1].x;
+                      painAreaPath = `${painLinePath} L ${lastX} ${paddingY + plotHeight} L ${firstX} ${paddingY + plotHeight} Z`;
+                    }
+
+                    let swellingLinePath = "";
+                    swellingPoints.forEach((pt, idx) => {
+                      if (idx === 0) {
+                        swellingLinePath += `M ${pt.x} ${pt.y}`;
+                      } else {
+                        swellingLinePath += ` L ${pt.x} ${pt.y}`;
+                      }
+                    });
+
+                    let swellingAreaPath = "";
+                    if (swellingPoints.length > 0) {
+                      const firstX = swellingPoints[0].x;
+                      const lastX = swellingPoints[swellingPoints.length - 1].x;
+                      swellingAreaPath = `${swellingLinePath} L ${lastX} ${paddingY + plotHeight} L ${firstX} ${paddingY + plotHeight} Z`;
                     }
 
                     return (
                       <div style={{ position: 'relative' }}>
                         <svg width="100%" height={height} viewBox={`0 0 ${width} ${height}`} style={{ background: 'rgba(0,0,0,0.15)', borderRadius: '8px', overflow: 'visible' }}>
+                          
+                          {/* Left Y-Axis (Pain Level) */}
                           {[0, 2, 4, 6, 8, 10].map((val) => {
                             const y = paddingY + plotHeight - (val * plotHeight) / 10;
                             return (
-                              <g key={val}>
+                              <g key={`pain-axis-${val}`}>
                                 <line x1={paddingX} y1={y} x2={width - paddingX} y2={y} stroke="rgba(255,255,255,0.05)" strokeDasharray="3 3" />
-                                <text x={paddingX - 12} y={y + 4} fill="var(--text-secondary)" fontSize="10" textAnchor="end">{val}</text>
+                                <text x={paddingX - 12} y={y + 4} fill="#ef4444" fontSize="9" fontWeight="bold" textAnchor="end">{val}</text>
+                              </g>
+                            );
+                          })}
+
+                          {/* Right Y-Axis (Swelling Level) */}
+                          {[
+                            { val: 0, label: lang === 'hi' ? 'कोई नहीं' : 'None' },
+                            { val: 1, label: lang === 'hi' ? 'हल्की' : 'Mild' },
+                            { val: 2, label: lang === 'hi' ? 'मध्यम' : 'Mod' },
+                            { val: 3, label: lang === 'hi' ? 'गंभीर' : 'Sev' }
+                          ].map((item) => {
+                            const y = paddingY + plotHeight - ((item.val * 10 / 3) * plotHeight) / 10;
+                            return (
+                              <g key={`swell-axis-${item.val}`}>
+                                <text x={width - paddingX + 12} y={y + 4} fill="#3b82f6" fontSize="9" fontWeight="bold" textAnchor="start">{item.label}</text>
                               </g>
                             );
                           })}
 
                           <defs>
-                            <linearGradient id="chartGradient" x1="0" y1="0" x2="0" y2="1">
-                              <stop offset="0%" stopColor="var(--primary)" stopOpacity="0.4" />
-                              <stop offset="100%" stopColor="var(--primary)" stopOpacity="0.0" />
+                            <linearGradient id="painGradient" x1="0" y1="0" x2="0" y2="1">
+                              <stop offset="0%" stopColor="#ef4444" stopOpacity="0.25" />
+                              <stop offset="100%" stopColor="#ef4444" stopOpacity="0.0" />
+                            </linearGradient>
+                            <linearGradient id="swellingGradient" x1="0" y1="0" x2="0" y2="1">
+                              <stop offset="0%" stopColor="#3b82f6" stopOpacity="0.2" />
+                              <stop offset="100%" stopColor="#3b82f6" stopOpacity="0.0" />
                             </linearGradient>
                           </defs>
 
-                          {areaPath && <path d={areaPath} fill="url(#chartGradient)" />}
+                          {/* Pain Level Area & Line */}
+                          {painAreaPath && <path d={painAreaPath} fill="url(#painGradient)" />}
+                          {painLinePath && <path d={painLinePath} fill="none" stroke="#ef4444" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round" />}
 
-                          {linePath && <path d={linePath} fill="none" stroke="var(--primary)" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />}
+                          {/* Swelling Level Area & Line */}
+                          {swellingAreaPath && <path d={swellingAreaPath} fill="url(#swellingGradient)" />}
+                          {swellingLinePath && <path d={swellingLinePath} fill="none" stroke="#3b82f6" strokeWidth="2.5" strokeDasharray="5 3" strokeLinecap="round" strokeLinejoin="round" />}
 
-                          {points.map((pt, idx) => {
+                          {/* Data points */}
+                          {painPoints.map((pt, idx) => {
                             const isHovered = hoveredLog && hoveredLog.id === pt.log.id;
+                            const swellPt = swellingPoints[idx];
                             return (
                               <g key={pt.log.id}>
+                                {/* Vertical highlight bar */}
+                                <line 
+                                  x1={pt.x} 
+                                  y1={paddingY} 
+                                  x2={pt.x} 
+                                  y2={paddingY + plotHeight} 
+                                  stroke={isHovered ? "rgba(255,255,255,0.15)" : "transparent"} 
+                                  strokeWidth="1.5" 
+                                />
+
+                                {/* Pain dot */}
                                 <circle 
                                   cx={pt.x} 
                                   cy={pt.y} 
                                   r={isHovered ? "7" : "5"} 
-                                  fill="var(--primary)" 
+                                  fill="#ef4444" 
                                   stroke="#ffffff" 
                                   strokeWidth="2" 
                                   style={{ cursor: 'pointer', transition: 'all 0.1s ease' }}
                                   onMouseEnter={() => setHoveredLog(pt.log)}
                                   onMouseLeave={() => setHoveredLog(null)}
                                 />
+
+                                {/* Swelling dot */}
+                                {swellPt && (
+                                  <circle 
+                                    cx={swellPt.x} 
+                                    cy={swellPt.y} 
+                                    r={isHovered ? "6" : "4.5"} 
+                                    fill="#3b82f6" 
+                                    stroke="#ffffff" 
+                                    strokeWidth="1.5" 
+                                    style={{ cursor: 'pointer', transition: 'all 0.1s ease' }}
+                                    onMouseEnter={() => setHoveredLog(pt.log)}
+                                    onMouseLeave={() => setHoveredLog(null)}
+                                  />
+                                )}
+
+                                {/* Hover trigger zone */}
                                 <circle 
                                   cx={pt.x} 
-                                  cy={pt.y} 
-                                  r="15" 
+                                  cy={(pt.y + (swellPt ? swellPt.y : pt.y)) / 2} 
+                                  r="25" 
                                   fill="transparent" 
                                   style={{ cursor: 'pointer' }}
                                   onMouseEnter={() => setHoveredLog(pt.log)}
                                   onMouseLeave={() => setHoveredLog(null)}
                                 />
+
                                 <text x={pt.x} y={height - 8} fill="var(--text-secondary)" fontSize="9" textAnchor="middle" transform={`rotate(-15 ${pt.x} ${height - 8})`}>
                                   {new Date(pt.log.date).toLocaleDateString(undefined, {month: 'short', day: 'numeric'})}
                                 </text>
@@ -4896,15 +6139,15 @@ Return your response strictly in the following JSON format:
                               border: '1px solid var(--primary)', 
                               borderRadius: '8px', 
                               fontSize: '0.8rem', 
-                              width: '160px',
+                              width: '180px',
                               zIndex: 10
                             }}
                           >
                             <div style={{ fontWeight: 'bold', borderBottom: '1px solid rgba(255,255,255,0.1)', paddingBottom: '0.25rem', marginBottom: '0.25rem' }}>
                               {new Date(hoveredLog.date).toLocaleDateString()}
                             </div>
-                            <div>Pain Level: <strong style={{ color: 'var(--primary)' }}>{hoveredLog.painLevel}/10</strong></div>
-                            <div>Sujan: <span style={{ textTransform: 'capitalize' }}>{swellingLabelMap[hoveredLog.swelling] || hoveredLog.swelling}</span></div>
+                            <div>Pain Level: <strong style={{ color: '#ef4444' }}>{hoveredLog.painLevel}/10</strong></div>
+                            <div>Sujan (Swelling): <strong style={{ color: '#3b82f6' }}>{swellingLabelMap[hoveredLog.swelling] || hoveredLog.swelling}</strong></div>
                             <div>Mobility: <span style={{ textTransform: 'capitalize' }}>{mobilityLabelMap[hoveredLog.mobility] || hoveredLog.mobility}</span></div>
                             {hoveredLog.notes && <div style={{ fontStyle: 'italic', opacity: 0.8, marginTop: '0.25rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>"{hoveredLog.notes}"</div>}
                           </div>
@@ -4913,9 +6156,218 @@ Return your response strictly in the following JSON format:
                     );
                   })()}
                 </div>
+
+                {/* Milestones Panel */}
+                <div className="glass-panel" style={{ padding: '1.5rem', marginBottom: '2rem' }}>
+                  <h3 style={{ fontSize: '1.1rem', marginBottom: '1rem', borderBottom: '1px solid rgba(255,255,255,0.05)', paddingBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                    🏆 {lang === 'hi' ? "पुनर्प्राप्ति मील के पत्थर (Milestones)" : (lang === 'hn' ? "Recovery Milestones Unlocked" : "Healing Milestones")}
+                  </h3>
+                  
+                  {(() => {
+                    const hasDay1 = sortedLogs.some(log => log.id.startsWith('log_init_'));
+                    const latestLog = sortedLogs.length > 0 ? sortedLogs[sortedLogs.length - 1] : null;
+                    const initialLog = sortedLogs.find(log => log.id.startsWith('log_init_'));
+                    
+                    const exerciseCount = sortedLogs.reduce((acc, log) => acc + (log.completedExercises?.length || 0), 0);
+                    
+                    let painReduced = false;
+                    let painHalf = false;
+                    if (initialLog && latestLog) {
+                      if (latestLog.painLevel < initialLog.painLevel) {
+                        painReduced = true;
+                      }
+                      if (latestLog.painLevel <= initialLog.painLevel / 2) {
+                        painHalf = true;
+                      }
+                    }
+                    
+                    let swellingDown = false;
+                    if (initialLog && latestLog) {
+                      const getSwellingScore = (sw) => {
+                        if (sw === 'severe') return 3;
+                        if (sw === 'moderate') return 2;
+                        if (sw === 'mild') return 1;
+                        return 0;
+                      };
+                      if (getSwellingScore(latestLog.swelling) < getSwellingScore(initialLog.swelling)) {
+                        swellingDown = true;
+                      }
+                    }
+
+                    const fullyActive = latestLog && latestLog.painLevel === 0 && latestLog.mobility === 'normal';
+
+                    const MILESTONES = [
+                      {
+                        id: "baseline",
+                        name: lang === 'hi' ? "पहला कदम (Baseline)" : "First Step (Baseline)",
+                        desc: lang === 'hi' ? "प्रारंभिक चोट मूल्यांकन पूरा किया गया" : "Logged your initial Day 1 assessment.",
+                        unlocked: hasDay1,
+                        icon: "🏁"
+                      },
+                      {
+                        id: "pain_down",
+                        name: lang === 'hi' ? "दर्द में राहत (Pain Down)" : "Inflammation Relief",
+                        desc: lang === 'hi' ? "आपका दर्द कम होना शुरू हो गया है" : "Pain level decreased from baseline entry.",
+                        unlocked: painReduced,
+                        icon: "📉"
+                      },
+                      {
+                        id: "swell_down",
+                        name: lang === 'hi' ? "सूजन कम हुई" : "Swelling Subsiding",
+                        desc: lang === 'hi' ? "चोट की सूजन में सुधार आया है" : "Swelling reduced compared to day 1.",
+                        unlocked: swellingDown,
+                        icon: "💧"
+                      },
+                      {
+                        id: "rehab_start",
+                        name: lang === 'hi' ? "व्यायाम प्रारंभ" : "Active Rehabilitation",
+                        desc: lang === 'hi' ? "कम से कम 1 फिजियोथेरेपी व्यायाम पूरा किया" : "Successfully completed a rehab exercise session.",
+                        unlocked: exerciseCount >= 1,
+                        icon: "💪"
+                      },
+                      {
+                        id: "halfway",
+                        name: lang === 'hi' ? "आधा सुधार (50% Recovered)" : "Halfway Healed",
+                        desc: lang === 'hi' ? "दर्द के स्तर में 50% से अधिक कमी आई है" : "Pain level reduced by 50% or more from Day 1.",
+                        unlocked: painHalf,
+                        icon: "⚡"
+                      },
+                      {
+                        id: "fully_recovered",
+                        name: lang === 'hi' ? "पूर्ण स्वस्थ (Fully Healed)" : "Fully Healed & Active",
+                        desc: lang === 'hi' ? "दर्द 0/10 है और चलने की क्षमता पूर्ण है" : "Pain reached 0 and full range of motion returned.",
+                        unlocked: fullyActive,
+                        icon: "❇️"
+                      }
+                    ];
+
+                    return (
+                      <div style={{ display: 'grid', gridTemplateColumns: window.innerWidth < 480 ? '1fr' : '1fr 1fr', gap: '1rem' }}>
+                        {MILESTONES.map((m) => (
+                          <div 
+                            key={m.id}
+                            className="glass-panel"
+                            style={{ 
+                              padding: '1rem', 
+                              display: 'flex', 
+                              gap: '0.75rem', 
+                              alignItems: 'center',
+                              background: m.unlocked ? 'rgba(0, 194, 168, 0.05)' : 'rgba(255,255,255,0.01)',
+                              border: m.unlocked ? '1px solid rgba(0, 194, 168, 0.25)' : '1px solid var(--border)',
+                              opacity: m.unlocked ? 1 : 0.45,
+                              filter: m.unlocked ? 'none' : 'grayscale(100%)',
+                              transition: 'all 0.3s'
+                            }}
+                          >
+                            <span style={{ fontSize: '1.75rem' }}>{m.icon}</span>
+                            <div>
+                              <div style={{ fontWeight: 'bold', fontSize: '0.85rem', color: m.unlocked ? 'var(--primary)' : 'inherit' }}>
+                                {m.name} {m.unlocked && "✓"}
+                              </div>
+                              <div style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', marginTop: '2px', lineHeight: 1.3 }}>
+                                {m.desc}
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    );
+                  })()}
+                </div>
               </div>
 
               <div>
+                {/* Progression Calendar Card */}
+                <div className="glass-panel" style={{ padding: '1.5rem', marginBottom: '1.5rem' }}>
+                  <h3 style={{ fontSize: '1.1rem', marginBottom: '1rem', borderBottom: '1px solid rgba(255,255,255,0.05)', paddingBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                    📅 {lang === 'hi' ? "रिकवरी प्रोग्रेस कैलेंडर" : (lang === 'hn' ? "Recovery Calendar Tracker" : "Progression Calendar")}
+                  </h3>
+                  
+                  {(() => {
+                    const days = getCalendarDays();
+                    const now = new Date();
+                    const monthName = now.toLocaleString(lang === 'hi' ? 'hi-IN' : 'en-US', { month: 'long', year: 'numeric' });
+                    const weekdays = lang === 'hi' ? ['र', 'सो', 'मं', 'बु', 'गु', 'शु', 'श'] : ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'];
+
+                    return (
+                      <div>
+                        <div style={{ textAlign: 'center', fontWeight: 'bold', fontSize: '0.9rem', marginBottom: '0.75rem', textTransform: 'capitalize', color: 'var(--primary)' }}>
+                          {monthName}
+                        </div>
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '0.25rem', textAlign: 'center', fontWeight: 'bold', fontSize: '0.75rem', color: 'var(--text-secondary)', marginBottom: '0.5rem' }}>
+                          {weekdays.map(d => <div key={d}>{d}</div>)}
+                        </div>
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '0.4rem' }}>
+                          {days.map((day, idx) => {
+                            if (!day) return <div key={`empty-${idx}`} style={{ aspectRatio: '1' }}></div>;
+                            
+                            const log = getLogForDate(day);
+                            const isToday = day.toDateString() === new Date().toDateString();
+                            
+                            let bg = 'rgba(255,255,255,0.02)';
+                            let border = '1px solid var(--border)';
+                            let color = 'inherit';
+                            
+                            if (log) {
+                              if (log.painLevel <= 2) {
+                                bg = 'rgba(34, 197, 94, 0.15)';
+                                border = '1px solid #22c55e';
+                                color = '#22c55e';
+                              } else if (log.painLevel <= 5) {
+                                bg = 'rgba(234, 179, 8, 0.15)';
+                                border = '1px solid #eab308';
+                                color = '#eab308';
+                              } else {
+                                bg = 'rgba(239, 68, 68, 0.15)';
+                                border = '1px solid #ef4444';
+                                color = '#ef4444';
+                              }
+                            } else if (isToday) {
+                              border = '1px dashed var(--primary)';
+                            }
+
+                            return (
+                              <div 
+                                key={day.toISOString()} 
+                                className="calendar-day-cell"
+                                style={{ 
+                                  aspectRatio: '1', 
+                                  display: 'flex', 
+                                  alignItems: 'center', 
+                                  justifyContent: 'center', 
+                                  borderRadius: '6px', 
+                                  background: bg, 
+                                  border: border, 
+                                  fontSize: '0.8rem', 
+                                  fontWeight: log || isToday ? 'bold' : 'normal',
+                                  color: color,
+                                  cursor: log ? 'pointer' : 'default',
+                                  transition: 'all 0.2s',
+                                  position: 'relative'
+                                }}
+                                onClick={() => log && setHoveredLog(log)}
+                                title={log ? `Pain: ${log.painLevel}, Sujan: ${log.swelling}` : undefined}
+                              >
+                                {day.getDate()}
+                                {log && (
+                                  <span style={{ 
+                                    position: 'absolute', 
+                                    bottom: '3px', 
+                                    width: '4px', 
+                                    height: '4px', 
+                                    borderRadius: '50%', 
+                                    background: log.painLevel <= 2 ? '#22c55e' : (log.painLevel <= 5 ? '#eab308' : '#ef4444') 
+                                  }}></span>
+                                )}
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    );
+                  })()}
+                </div>
+
                 <div className="glass-panel" style={{ padding: '1.5rem', maxHeight: '420px', overflowY: 'auto' }}>
                   <h3 style={{ fontSize: '1.1rem', marginBottom: '1rem', borderBottom: '1px solid rgba(255,255,255,0.05)', paddingBottom: '0.5rem' }}>
                     {lang === 'hi' ? "चेक-इन इतिहास (Logs)" : (lang === 'hn' ? "Daily Logs History" : "Check-in Logs")}
@@ -5026,17 +6478,54 @@ Return your response strictly in the following JSON format:
 
             {/* Right Column: Timer Panel */}
             <div>
-              <div className="glass-panel" style={{ padding: '2rem', textAlign: 'center', minHeight: '300px', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', gap: '1.25rem', position: 'sticky', top: '20px' }}>
+              <div className="glass-panel" style={{ padding: '2rem', textAlign: 'center', minHeight: '320px', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', gap: '1.25rem', position: 'sticky', top: '20px' }}>
                 {activeExercise ? (
                   <>
-                    <h3 style={{ fontSize: '1.3rem', margin: 0, color: 'var(--text-primary)' }}>{activeExercise.name}</h3>
-                    <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', margin: 0, lineHeight: '1.2rem' }}>
-                      {lang === 'hn' ? "Apne posture me hold karein aur focus karein!" : "Maintain correct posture and hold the stretch!"}
-                    </p>
-
-                    <div style={{ fontSize: '3.5rem', fontWeight: 800, fontFamily: 'monospace', margin: '0.5rem 0', color: 'var(--primary)', textShadow: '0 0 15px rgba(59, 130, 246, 0.4)' }}>
-                      {rehabTimer}s
+                    <h3 style={{ fontSize: '1.2rem', margin: 0, color: 'var(--text-primary)' }}>{activeExercise.name}</h3>
+                    
+                    {/* Animated Progress Ring */}
+                    <div style={{ position: 'relative', width: '130px', height: '130px', margin: '0.25rem 0' }}>
+                      <svg width="130" height="130" viewBox="0 0 100 100" style={{ transform: 'rotate(-90deg)', overflow: 'visible' }}>
+                        {/* Background track */}
+                        <circle cx="50" cy="50" r="42" fill="none" stroke="rgba(255,255,255,0.05)" strokeWidth="6" />
+                        {/* Animated progress fill */}
+                        <circle 
+                          cx="50" 
+                          cy="50" 
+                          r="42" 
+                          fill="none" 
+                          stroke="var(--primary)" 
+                          strokeWidth="6" 
+                          strokeDasharray="263.89" 
+                          strokeDashoffset={263.89 - (rehabTimer / activeExercise.duration) * 263.89} 
+                          strokeLinecap="round" 
+                          style={{ transition: 'stroke-dashoffset 0.1s linear' }}
+                        />
+                      </svg>
+                      {/* Inside details */}
+                      <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center' }}>
+                        <span style={{ fontSize: '2.2rem', fontWeight: 800, fontFamily: 'monospace', color: 'var(--primary)', lineHeight: 1 }}>
+                          {rehabTimer}
+                        </span>
+                        <span style={{ fontSize: '0.65rem', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em', marginTop: '2px' }}>
+                          sec
+                        </span>
+                      </div>
                     </div>
+
+                    {/* Animated Active Motion Icon */}
+                    <div 
+                      className={rehabTimerRunning ? "exercise-active-motion" : ""}
+                      style={{ color: 'var(--primary)', opacity: rehabTimerRunning ? 1 : 0.6, transformOrigin: 'center', transition: 'all 0.3s' }}
+                    >
+                      {activeExercise.svg}
+                    </div>
+
+                    <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', margin: 0, lineHeight: '1.2rem' }}>
+                      {rehabTimerRunning 
+                        ? (lang === 'hn' ? "Apne posture me hold karein aur focus karein!" : "Maintain correct posture and hold the stretch!") 
+                        : (lang === 'hn' ? "Timer paused. Apni exercise resume karein." : "Timer paused. Click 'Start' to resume.")}
+                    </p>
 
                     <div style={{ display: 'flex', gap: '0.75rem' }}>
                       <button 
@@ -5068,6 +6557,188 @@ Return your response strictly in the following JSON format:
             </div>
           </div>
         )}
+
+        {recoverySubTab === 'goniometer' && (() => {
+          const romData = {
+            ankle: { name: "Ankle Dorsiflexion", normal: 20, desc: "Ankle ko upar bend karne ki capacity (normal is 20°)." },
+            knee: { name: "Knee Flexion", normal: 135, desc: "Knee ko peeche bend karne ki capacity (normal is 135°)." },
+            wrist: { name: "Wrist Extension", normal: 70, desc: "Klayi ko peeche lift karne ki capacity (normal is 70°)." },
+            foot: { name: "Foot Inversion", normal: 35, desc: "Foot sole ko andar tilt karne ki capacity (normal is 35°)." }
+          }[trackedItem.injuryArea] || { name: "Joint Mobility", normal: 90, desc: "Bending capability of the injured joint." };
+
+          const isMobilityNormal = goniometerAngle >= romData.normal;
+
+          const handleSaveRomLog = () => {
+            const todayStr = new Date().toISOString().split('T')[0];
+            const logsKey = `injuryiq_recovery_logs_${currentUser.email}_${trackedItem.assessmentId}`;
+            const existingLogs = localStorage.getItem(logsKey) ? JSON.parse(localStorage.getItem(logsKey)) : [];
+            
+            let todayLog = existingLogs.find(log => log.date === todayStr);
+            if (todayLog) {
+              todayLog.goniometerAngle = goniometerAngle;
+              todayLog.notes = `${todayLog.notes || ''} | ROM Measured: ${goniometerAngle}° (${romData.name})`.trim().replace(/^\| /, '');
+            } else {
+              todayLog = {
+                id: `log_${Date.now()}`,
+                painLevel: 3,
+                swelling: 'none',
+                mobility: goniometerAngle >= romData.normal ? 'normal' : 'partial',
+                goniometerAngle: goniometerAngle,
+                notes: `ROM Measured: ${goniometerAngle}° (${romData.name})`,
+                date: todayStr
+              };
+              existingLogs.push(todayLog);
+            }
+            
+            localStorage.setItem(logsKey, JSON.stringify(existingLogs));
+            setRecoveryLogs(existingLogs);
+            alert(lang === 'hi' 
+              ? `📐 मोबिलिटी लॉग सहेजा गया!\n\n${romData.name}: ${goniometerAngle}° (Normal: ${romData.normal}°)` 
+              : `📐 Range of Motion logged successfully!\n\n${romData.name}: ${goniometerAngle}° (Normal: ${romData.normal}°)`);
+          };
+
+          return (
+            <div className="dashboard-grid fade-in" style={{ padding: '0.5rem 0' }}>
+              <div className="glass-panel" style={{ padding: '2rem', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                <h4 style={{ margin: '0 0 1rem 0', fontWeight: 800 }}>📐 {lang === 'hi' ? 'वर्चुअल गोनियोमीटर' : 'Range of Motion (ROM) Protractor'}</h4>
+                <p style={{ margin: '0 0 1.5rem 0', fontSize: '0.82rem', color: 'var(--text-secondary)', textAlign: 'center', maxWidth: '360px' }}>
+                  {lang === 'hi' 
+                    ? 'नीले हैंडल को ड्रैग करके जोड़ के मुड़ाव (Angle) को नापें।' 
+                    : lang === 'hn' 
+                      ? 'Yellow marker/handle ko circle ke surround drag karke bending angle measure karein.' 
+                      : 'Drag the glowing yellow handle to match the active joint flexion/extension angle.'}
+                </p>
+
+                <svg 
+                  ref={goniometerSvgRef}
+                  className="goniometer-dial"
+                  width="260" 
+                  height="260" 
+                  viewBox="0 0 240 240" 
+                  style={{ cursor: isDraggingArm ? 'grabbing' : 'default', touchAction: 'none' }}
+                >
+                  <defs>
+                    <radialGradient id="protractorGlow" cx="50%" cy="50%" r="50%">
+                      <stop offset="0%" stopColor="rgba(56, 189, 248, 0.15)" />
+                      <stop offset="100%" stopColor="rgba(15, 23, 42, 0)" />
+                    </radialGradient>
+                  </defs>
+
+                  <circle cx="120" cy="120" r="110" fill="url(#protractorGlow)" />
+                  <circle cx="120" cy="120" r="100" fill="none" stroke="rgba(255,255,255,0.1)" strokeWidth="8" />
+                  <path d="M 20 120 A 100 100 0 0 1 220 120" fill="none" stroke="rgba(56, 189, 248, 0.3)" strokeWidth="3" />
+
+                  {[0, 30, 60, 90, 120, 150, 180].map((deg) => {
+                    const rad = (deg * Math.PI) / 180;
+                    const xStart = 120 + 96 * Math.cos(rad);
+                    const yStart = 120 - 96 * Math.sin(rad);
+                    const xEnd = 120 + 104 * Math.cos(rad);
+                    const yEnd = 120 - 104 * Math.sin(rad);
+                    
+                    const labelX = 120 + 82 * Math.cos(rad);
+                    const labelY = 120 - 82 * Math.sin(rad);
+
+                    return (
+                      <g key={deg}>
+                        <line x1={xStart} y1={yStart} x2={xEnd} y2={yEnd} stroke="rgba(255,255,255,0.4)" strokeWidth="1.5" />
+                        <text x={labelX} y={labelY + 2.5} fill="#94a3b8" fontSize="6.5" fontWeight="bold" textAnchor="middle" style={{ userSelect: 'none' }}>{deg}°</text>
+                      </g>
+                    );
+                  })}
+
+                  {[10, 20, 40, 50, 70, 80, 100, 110, 130, 140, 160, 170].map((deg) => {
+                    const rad = (deg * Math.PI) / 180;
+                    const xStart = 120 + 98 * Math.cos(rad);
+                    const yStart = 120 - 98 * Math.sin(rad);
+                    const xEnd = 120 + 102 * Math.cos(rad);
+                    const yEnd = 120 - 102 * Math.sin(rad);
+                    return <line key={deg} x1={xStart} y1={yStart} x2={xEnd} y2={yEnd} stroke="rgba(255,255,255,0.2)" strokeWidth="1" />;
+                  })}
+
+                  <line x1="120" y1="120" x2="215" y2="120" stroke="#94a3b8" strokeWidth="4" strokeLinecap="round" />
+                  <circle cx="215" cy="120" r="3" fill="#ffffff" />
+
+                  {(() => {
+                    const rad = (goniometerAngle * Math.PI) / 180;
+                    const armX = 120 + 95 * Math.cos(rad);
+                    const armY = 120 - 95 * Math.sin(rad);
+                    return (
+                      <g>
+                        <path 
+                          d={`M 120 120 L 210 120 A 90 90 0 ${goniometerAngle > 180 ? 1 : 0} 0 ${120 + 90 * Math.cos(rad)} ${120 - 90 * Math.sin(rad)} Z`} 
+                          fill="rgba(56, 189, 248, 0.08)" 
+                        />
+                        <line className="draggable-arm" x1="120" y1="120" x2={armX} y2={armY} stroke="#38bdf8" strokeWidth="4" strokeLinecap="round" />
+                        <g 
+                          onMouseDown={() => setIsDraggingArm(true)}
+                          onTouchStart={() => setIsDraggingArm(true)}
+                          style={{ cursor: isDraggingArm ? 'grabbing' : 'grab' }}
+                        >
+                          <circle cx={armX} cy={armY} r="12" fill="none" stroke="#fbbf24" strokeWidth="1.5">
+                            <animate attributeName="r" values="8;13;8" dur="2s" repeatCount="indefinite" />
+                          </circle>
+                          <circle cx={armX} cy={armY} r="8" fill="#fbbf24" stroke="#ffffff" strokeWidth="1.5" />
+                        </g>
+                      </g>
+                    );
+                  })()}
+
+                  <circle cx="120" cy="120" r="7" fill="var(--primary)" stroke="#ffffff" strokeWidth="1.8" />
+                  <circle cx="120" cy="120" r="2.5" fill="#ffffff" />
+                </svg>
+
+                <div style={{ marginTop: '1.5rem', textAlign: 'center' }}>
+                  <div style={{ fontSize: '3rem', fontWeight: 800, color: '#fbbf24', fontFamily: 'monospace', lineHeight: 1 }}>{goniometerAngle}°</div>
+                  <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', fontWeight: 600 }}>{lang === 'hi' ? 'मापा गया कोण' : 'Measured Angle'}</span>
+                </div>
+              </div>
+
+              <div className="glass-panel" style={{ padding: '2rem', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+                <div>
+                  <span className="badge badge-low" style={{ marginBottom: '0.75rem', background: 'rgba(56, 189, 248, 0.1)', color: '#38bdf8', border: '1px solid rgba(56,189,248,0.2)' }}>
+                    📊 Clinical ROM Analytics
+                  </span>
+                  
+                  <h3 style={{ margin: '0 0 0.5rem 0', fontSize: '1.35rem', fontWeight: 800, textTransform: 'capitalize' }}>
+                    {romData.name} ({lang === 'hi' ? (trackedItem.injuryArea === 'ankle' ? 'टखना' : trackedItem.injuryArea === 'knee' ? 'घुटना' : trackedItem.injuryArea === 'foot' ? 'पैर' : 'कलाई') : trackedItem.injuryArea})
+                  </h3>
+                  <p style={{ margin: '0 0 1.5rem 0', fontSize: '0.9rem', color: 'var(--text-secondary)', lineHeight: '1.4' }}>{romData.desc}</p>
+                  
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem', borderTop: '1px solid var(--border)', paddingTop: '1.25rem' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.92rem' }}>
+                      <span style={{ color: 'var(--text-secondary)' }}>Target Normal Mobility:</span>
+                      <strong style={{ color: '#10b981' }}>&ge; {romData.normal}°</strong>
+                    </div>
+                    
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.92rem' }}>
+                      <span style={{ color: 'var(--text-secondary)' }}>Active Bending Measured:</span>
+                      <strong style={{ color: '#fbbf24' }}>{goniometerAngle}°</strong>
+                    </div>
+
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.92rem', borderTop: '1px dashed rgba(255,255,255,0.06)', paddingTop: '0.85rem' }}>
+                      <span style={{ color: 'var(--text-secondary)' }}>Mobility Health Status:</span>
+                      <strong style={{ color: isMobilityNormal ? '#10b981' : '#f87171' }}>
+                        {isMobilityNormal 
+                          ? (lang === 'hi' ? 'सामान्य (Normal)' : 'Normal Bending') 
+                          : (lang === 'hi' ? 'सीमित (Limited ROM)' : 'Restricted Bending')}
+                      </strong>
+                    </div>
+                  </div>
+                </div>
+
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', marginTop: '2rem' }}>
+                  <button 
+                    onClick={handleSaveRomLog}
+                    className="btn btn-primary" 
+                    style={{ justifyContent: 'center', background: 'linear-gradient(135deg, #38bdf8, #0284c7)', border: 'none', padding: '0.8rem', borderRadius: '8px' }}
+                  >
+                    💾 {lang === 'hi' ? "मोबिलिटी डेटा लॉग करें" : (lang === 'hn' ? "ROM Value Log Karein" : "Log Measured ROM")}
+                  </button>
+                </div>
+              </div>
+            </div>
+          );
+        })()}
       </div>
     );
   })()}
@@ -5236,6 +6907,68 @@ Return your response strictly in the following JSON format:
           lang={lang}
           onClose={() => { setIsSosOpen(false); setSosStatus('idle'); }}
         />
+      )}
+
+      {/* --- PWA INSTALLATION GUIDANCE DIALOG --- */}
+      {showInstallGuide && (
+        <div className="modal-backdrop" style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(15, 23, 42, 0.85)', backdropFilter: 'blur(8px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 10000, padding: '1rem' }} onClick={() => setShowInstallGuide(false)}>
+          <div className="glass-panel" style={{ width: '100%', maxWidth: '480px', padding: '2rem', border: '1px solid rgba(255, 255, 255, 0.08)', background: 'linear-gradient(135deg, rgba(30, 41, 59, 0.95), rgba(15, 23, 42, 0.98))', borderRadius: '16px', boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)', position: 'relative' }} onClick={(e) => e.stopPropagation()}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1.5rem' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                <span style={{ fontSize: '2rem' }}>📥</span>
+                <div>
+                  <h3 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 800, color: '#f8fafc' }}>Install InjuryIQ AI</h3>
+                  <p style={{ margin: '0.25rem 0 0', fontSize: '0.85rem', color: '#94a3b8' }}>Progressive Web App Guidance</p>
+                </div>
+              </div>
+              <button onClick={() => setShowInstallGuide(false)} style={{ background: 'transparent', border: 'none', color: '#cbd5e1', fontSize: '1.25rem', cursor: 'pointer', padding: 0 }}>✕</button>
+            </div>
+            
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', color: '#cbd5e1', fontSize: '0.92rem', lineHeight: '1.5' }}>
+              <div style={{ padding: '0.75rem 1rem', background: 'rgba(255, 255, 255, 0.03)', borderLeft: '3px solid #10b981', borderRadius: '0 8px 8px 0' }}>
+                <strong>🚀 Quick Note:</strong> App and background files are loaded! Agar direct browser trigger ready nahi hai, toh aap neeche diye gaye methods se install kar sakte hain.
+              </div>
+
+              <div>
+                <strong style={{ color: '#38bdf8' }}>💻 For Desktop (Chrome/Edge):</strong>
+                <ol style={{ margin: '0.25rem 0 0', paddingLeft: '1.25rem' }}>
+                  <li>Browser address bar (URL tab) ke right side me <strong>install icon</strong> (desktop with down-arrow) par click karein.</li>
+                  <li>Ya fir, top-right menu (3-dots) &rarr; <strong>Save and share</strong> &rarr; <strong>Install InjuryIQ AI</strong> select karein.</li>
+                </ol>
+              </div>
+
+              <div>
+                <strong style={{ color: '#38bdf8' }}>📱 For Mobile (Android/Chrome):</strong>
+                <ol style={{ margin: '0.25rem 0 0', paddingLeft: '1.25rem' }}>
+                  <li>Top-right menu (3-dots) par click karein.</li>
+                  <li><strong>"Add to Home screen"</strong> ya <strong>"Install app"</strong> select karein.</li>
+                </ol>
+              </div>
+
+              <div>
+                <strong style={{ color: '#38bdf8' }}>🍏 For iPhone/iPad (Safari):</strong>
+                <ol style={{ margin: '0.25rem 0 0', paddingLeft: '1.25rem' }}>
+                  <li>Safari browser ke bottom me <strong>Share button</strong> (square with up-arrow) par click karein.</li>
+                  <li>Scroll karke <strong>"Add to Home Screen"</strong> par click karein.</li>
+                </ol>
+              </div>
+              
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginTop: '0.5rem', padding: '0.5rem 0.75rem', background: 'rgba(239, 68, 68, 0.1)', border: '1px solid rgba(239, 68, 68, 0.2)', borderRadius: '6px', fontSize: '0.8rem', color: '#f87171' }}>
+                <span>⚠️</span>
+                <span><strong>Incognito (Private) window</strong> me installation support blocked hota hai.</span>
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', gap: '0.75rem', marginTop: '1.5rem' }}>
+              <button className="btn btn-primary" style={{ flex: 1, justifyContent: 'center', background: 'linear-gradient(135deg, #10b981, #059669)', border: 'none', padding: '0.85rem', borderRadius: '8px', color: 'white', fontWeight: 'bold', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.5rem' }} onClick={handleDirectModalInstall}>
+                ⚡ Install Now (Direct)
+              </button>
+              <button className="btn btn-secondary" style={{ flex: 1, justifyContent: 'center', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', padding: '0.85rem', borderRadius: '8px', color: '#cbd5e1', fontWeight: 'bold', cursor: 'pointer' }} onClick={() => setShowInstallGuide(false)}>
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
       )}
 
 

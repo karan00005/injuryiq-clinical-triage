@@ -45,39 +45,83 @@ def save_users_db(users: list) -> bool:
         print(f"[DB ERROR] Could not save users_db.json: {e}")
         return False
 
+def deduplicate_users_file():
+    """Reads users_db.json, deduplicates by email (case-insensitive), keeping the verified/latest record, and saves it."""
+    try:
+        if not os.path.exists(USERS_DB_FILE):
+            return
+        with open(USERS_DB_FILE, "r", encoding="utf-8") as f:
+            users = json.load(f)
+        if not isinstance(users, list):
+            return
+        
+        seen = {}
+        for u in users:
+            email = u.get("email", "").strip().lower()
+            if not email:
+                continue
+            if email in seen:
+                existing = seen[email]
+                # Prefer verified user, or keep the one with longer/more data
+                if u.get("is_verified", False) and not existing.get("is_verified", False):
+                    seen[email] = u
+            else:
+                seen[email] = u
+        
+        deduped = list(seen.values())
+        if len(deduped) < len(users):
+            with open(USERS_DB_FILE, "w", encoding="utf-8") as f:
+                json.dump(deduped, f, ensure_ascii=False, indent=2)
+            print(f"[DB CLEANUP] Deduplicated users_db.json. Removed {len(users) - len(deduped)} duplicate record(s).")
+    except Exception as e:
+        print(f"[DB CLEANUP ERROR] Failed to deduplicate: {e}")
+
+# Run deduplication on startup/module load
+deduplicate_users_file()
+
 def find_user(email: str) -> dict | None:
     """Find a user by email in the persistent DB (or Firestore if available)."""
+    email_clean = email.strip().lower()
+    
+    # Try Firestore first
     if firebase_initialized and db is not None:
         try:
-            doc = db.collection("users").document(email).get()
+            doc = db.collection("users").document(email_clean).get()
             if doc.exists:
                 return doc.to_dict()
         except Exception as e:
             print(f"[DB ERROR] Firestore find_user failed: {e}")
+            
+    # Fallback/Mirror check in local JSON file
     users = load_users_db()
-    return next((u for u in users if u["email"] == email), None)
+    return next((u for u in users if u.get("email", "").strip().lower() == email_clean), None)
 
 def upsert_user(user: dict) -> bool:
-    """Insert or update a user in the persistent DB (or Firestore)."""
-    email = user["email"]
+    """Insert or update a user in both the persistent DB (Firestore) and mirror JSON file."""
+    email = user["email"].strip().lower()
+    user["email"] = email
+    
+    firestore_success = False
     if firebase_initialized and db is not None:
         try:
             db.collection("users").document(email).set(user)
             print(f"[DB] Saved user '{email}' to Firestore.")
-            return True
+            firestore_success = True
         except Exception as e:
             print(f"[DB ERROR] Firestore upsert failed: {e}")
-    # Fallback: JSON file
+            
+    # Always write to local JSON file as a mirror / fallback
     users = load_users_db()
-    existing_idx = next((i for i, u in enumerate(users) if u["email"] == email), None)
+    existing_idx = next((i for i, u in enumerate(users) if u.get("email", "").strip().lower() == email), None)
     if existing_idx is not None:
         users[existing_idx] = user
     else:
         users.append(user)
     result = save_users_db(users)
     if result:
-        print(f"[DB] Saved user '{email}' to users_db.json.")
-    return result
+        print(f"[DB] Saved user '{email}' to users_db.json (mirror/fallback).")
+        
+    return firestore_success or result
 
 # ─────────────────────────────────────────────
 # OTP STORE — in-memory, per-process (sufficient for college demo)
@@ -888,6 +932,7 @@ async def create_assessment(request: AssessmentRequest):
             "recommendations": result["recommendations"],
             "imageUrl": request.imageUrl,
             "comparisonImageUrl": request.comparisonImageUrl,
+            "customNotes": request.customNotes,
             "createdAt": created_at
         }
         
@@ -911,6 +956,7 @@ async def create_assessment(request: AssessmentRequest):
                 "recommendations": result["recommendations"].model_dump(),
                 "imageUrl": request.imageUrl,
                 "comparisonImageUrl": request.comparisonImageUrl,
+                "customNotes": request.customNotes,
                 "createdAt": created_at
             }
             doc_ref.set(firestore_payload)
@@ -919,6 +965,7 @@ async def create_assessment(request: AssessmentRequest):
             print(f"[MOCK] Mock Persistence Mode: Assessment '{assessment_id}' processed but Firestore is not connected.")
             
         return AssessmentResponse(**response_data)
+
         
     except HTTPException as he:
         raise he
