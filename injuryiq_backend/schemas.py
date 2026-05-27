@@ -28,6 +28,10 @@ class OttawaSchema(BaseModel):
     scaphoidTubercleTenderness: bool = False
     thumbCompressionPain: bool = False
     gripPain: bool = False
+    olecranonTenderness: bool = False
+    lateralEpicondyleTenderness: bool = False
+    medialEpicondyleTenderness: bool = False
+    elbowExtensionLoss: bool = False
 
 class RedFlagsSchema(BaseModel):
     boneProtruding: bool = False

@@ -96,6 +96,42 @@ def run_tests():
         }
     }
 
+    # SCENARIO 3: High Risk Elbow (Elbow, tenderness at olecranon and lateral epicondyle, loss of extension)
+    elbow_high_risk_payload = {
+        "userId": "test_user_3",
+        "injuryArea": "elbow",
+        "age": 30,
+        "injuryTimeAgo": "1-6 hours",
+        "howInjured": "sports_collision",
+        "soundHeard": "no_sound",
+        "lang": "en",
+        "symptoms": {
+            "painLevel": 6,
+            "painType": "sharp_stabbing",
+            "painIncreases": ["when_moving"],
+            "painReliefWithMeds": "yes",
+            "swelling": "moderate",
+            "bruising": "none",
+            "deformity": "no",
+            "skinColor": "normal",
+            "tightTense": False,
+            "movementAbility": "partial",
+            "sideComparison": "slightly_different"
+        },
+        "ottawaResults": {
+            "olecranonTenderness": True,
+            "lateralEpicondyleTenderness": True,
+            "medialEpicondyleTenderness": False,
+            "elbowExtensionLoss": True
+        },
+        "redFlags": {
+            "boneProtruding": False,
+            "numbnessBelow": False,
+            "blueColdBelow": False,
+            "unrelivedPain": False
+        }
+    }
+
     print("\n--- TEST CASE 1: Low Risk Sprain ---")
     try:
         r1 = requests.post(url, data=json.dumps(low_risk_payload), headers=headers)
@@ -131,6 +167,24 @@ def run_tests():
             print(r2.text)
     except Exception as e:
         print(f"[ERROR] TEST 2 Fetch Exception: {e}")
+
+    print("\n--- TEST CASE 3: High Risk Elbow Triage ---")
+    try:
+        r3 = requests.post(url, data=json.dumps(elbow_high_risk_payload), headers=headers)
+        if r3.status_code == 200:
+            res3 = r3.json()
+            print(f"Status: {r3.status_code} OK")
+            print(f"Computed Score: {res3['riskScore']}")
+            print(f"Risk Level: {res3['riskLevel']}")
+            safe_print(f"Breakdown: {[item['factor'] for item in res3['scoreBreakdown']]}")
+            safe_print(f"Title: {res3['recommendations']['title']}")
+            assert res3["riskLevel"] == "HIGH", "Test 3 Failed: Risk level should be HIGH"
+            print("[PASS] TEST 3 PASSED!")
+        else:
+            print(f"[FAIL] TEST 3 FAILED (HTTP Status: {r3.status_code})")
+            print(r3.text)
+    except Exception as e:
+        print(f"[ERROR] TEST 3 Fetch Exception: {e}")
 
 if __name__ == "__main__":
     if not is_port_open(8000):

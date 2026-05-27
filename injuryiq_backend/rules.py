@@ -192,6 +192,19 @@ def calculate_triage_score(req: AssessmentRequest) -> Dict[str, Any]:
         if req.ottawaResults.gripPain:
             score += 15
             breakdown.append(ScoreBreakdownItem(factor="Severe pain when gripping objects", points=15))
+    elif req.injuryArea == 'elbow':
+        if req.ottawaResults.olecranonTenderness:
+            score += 25
+            breakdown.append(ScoreBreakdownItem(factor="Olecranon (elbow tip) bone tenderness", points=25))
+        if req.ottawaResults.lateralEpicondyleTenderness:
+            score += 25
+            breakdown.append(ScoreBreakdownItem(factor="Lateral Epicondyle (outer elbow bone) tenderness", points=25))
+        if req.ottawaResults.medialEpicondyleTenderness:
+            score += 25
+            breakdown.append(ScoreBreakdownItem(factor="Medial Epicondyle (inner elbow bone) tenderness", points=25))
+        if req.ottawaResults.elbowExtensionLoss:
+            score += 20
+            breakdown.append(ScoreBreakdownItem(factor="Inability to fully straighten (extend) the elbow", points=20))
 
     # High Energy Injury Mechanism
     if req.howInjured in ['fall_height', 'sports_collision', 'vehicle_accident', 'foosh']:

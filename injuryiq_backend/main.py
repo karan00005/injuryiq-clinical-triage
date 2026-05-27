@@ -417,9 +417,10 @@ io_module = None
 requests_module = None
 torch_module = None
 models_module = None
+SiameseAsymmetryNet = None
 
 def initialize_pytorch_lazy():
-    global pytorch_initialized, pytorch_available, model_state, imagenet_model, transforms_module, Image_module, io_module, requests_module, torch_module, models_module
+    global pytorch_initialized, pytorch_available, model_state, imagenet_model, transforms_module, Image_module, io_module, requests_module, torch_module, models_module, SiameseAsymmetryNet
     if pytorch_initialized:
         return
     
@@ -441,6 +442,31 @@ def initialize_pytorch_lazy():
         requests_module = requests
         models_module = models
         
+        # Define Siamese Network dynamically inside lazy loader
+        global SiameseAsymmetryNet
+        class DynamicSiameseAsymmetryNet(nn.Module):
+            def __init__(self, backbone_model, feature_dim, num_classes=4):
+                super(DynamicSiameseAsymmetryNet, self).__init__()
+                self.backbone = backbone_model
+                self.classifier = nn.Sequential(
+                    nn.Linear(feature_dim * 3, 256),
+                    nn.ReLU(),
+                    nn.Dropout(p=0.3),
+                    nn.Linear(256, 128),
+                    nn.ReLU(),
+                    nn.Dropout(p=0.2),
+                    nn.Linear(128, num_classes)
+                )
+
+            def forward(self, x_injured, x_healthy):
+                feat_injured = self.backbone(x_injured)
+                feat_healthy = self.backbone(x_healthy)
+                diff = torch.abs(feat_injured - feat_healthy)
+                combined = torch.cat((feat_injured, feat_healthy, diff), dim=1)
+                return self.classifier(combined)
+                
+        SiameseAsymmetryNet = DynamicSiameseAsymmetryNet
+        
         # Dynamic multi-architecture check based on saved clinical weight state dictionary keys
         if os.path.exists("injuryiq_model.pth"):
             print("[AI INIT] 'injuryiq_model.pth' detected. Inspecting weights architecture...")
@@ -448,36 +474,71 @@ def initialize_pytorch_lazy():
             
             # Inspect key patterns to dynamically allocate matching PyTorch network
             first_key = list(state_dict.keys())[0]
-            if "fc." in first_key or "layer4" in first_key:
-                print("[AI INIT] ResNet50 backbone keys detected. Loading ResNet50 pipeline...")
-                model_state = models.resnet50()
-                in_features = model_state.fc.in_features
-                model_state.fc = nn.Sequential(
-                    nn.Linear(in_features, 256),
-                    nn.ReLU(),
-                    nn.Dropout(p=0.3),
-                    nn.Linear(256, 4)
-                )
-            elif "classifier.3" in first_key and "features.15" in first_key:
-                print("[AI INIT] MobileNetV3 Large backbone detected. Loading MobileNetV3 Large pipeline...")
-                model_state = models.mobilenet_v3_large()
-                in_features = model_state.classifier[3].in_features
-                model_state.classifier[3] = nn.Sequential(
-                    nn.Linear(in_features, 128),
-                    nn.ReLU(),
-                    nn.Dropout(p=0.2),
-                    nn.Linear(128, 4)
-                )
+            is_siamese = any(k.startswith("backbone.") for k in state_dict.keys())
+            is_swin = any("head." in k or "head_block" in k for k in state_dict.keys())
+            is_resnet = any("fc." in k or "layer4" in k for k in state_dict.keys())
+            
+            if is_siamese:
+                print("[AI INIT] Siamese/Asymmetry architecture detected in checkpoint.")
+                if is_swin:
+                    print("[AI INIT] Siamese Backbone: Swin-T")
+                    backbone = models.swin_t()
+                    feature_dim = backbone.head.in_features
+                    backbone.head = nn.Identity()
+                elif is_resnet:
+                    print("[AI INIT] Siamese Backbone: ResNet50")
+                    backbone = models.resnet50()
+                    feature_dim = backbone.fc.in_features
+                    backbone.fc = nn.Identity()
+                else:
+                    print("[AI INIT] Siamese Backbone: MobileNetV3 Large")
+                    backbone = models.mobilenet_v3_large()
+                    feature_dim = backbone.classifier[3][0].in_features if isinstance(backbone.classifier[3], nn.Sequential) else backbone.classifier[3].in_features
+                    backbone.classifier = nn.Identity()
+                    
+                model_state = SiameseAsymmetryNet(backbone, feature_dim, num_classes=4)
             else:
-                print("[AI INIT] MobileNetV3 Small backbone detected. Loading MobileNetV3 Small pipeline...")
-                model_state = models.mobilenet_v3_small()
-                in_features = model_state.classifier[3].in_features
-                model_state.classifier[3] = nn.Sequential(
-                    nn.Linear(in_features, 128),
-                    nn.ReLU(),
-                    nn.Dropout(p=0.2),
-                    nn.Linear(128, 4)
-                )
+                print("[AI INIT] Single-Input architecture detected in checkpoint.")
+                if is_swin:
+                    print("[AI INIT] Architecture: Swin-T")
+                    model_state = models.swin_t()
+                    in_features = model_state.head.in_features
+                    model_state.head = nn.Sequential(
+                        nn.Linear(in_features, 256),
+                        nn.ReLU(),
+                        nn.Dropout(p=0.3),
+                        nn.Linear(256, 4)
+                    )
+                elif is_resnet:
+                    print("[AI INIT] Architecture: ResNet50")
+                    model_state = models.resnet50()
+                    in_features = model_state.fc.in_features
+                    model_state.fc = nn.Sequential(
+                        nn.Linear(in_features, 256),
+                        nn.ReLU(),
+                        nn.Dropout(p=0.3),
+                        nn.Linear(256, 4)
+                    )
+                elif "classifier.3" in first_key and "features.15" in first_key:
+                    print("[AI INIT] Architecture: MobileNetV3 Large")
+                    model_state = models.mobilenet_v3_large()
+                    in_features = model_state.classifier[3].in_features
+                    model_state.classifier[3] = nn.Sequential(
+                        nn.Linear(in_features, 128),
+                        nn.ReLU(),
+                        nn.Dropout(p=0.2),
+                        nn.Linear(128, 4)
+                    )
+                else:
+                    print("[AI INIT] Architecture: MobileNetV3 Small")
+                    model_state = models.mobilenet_v3_small()
+                    in_features = model_state.classifier[3].in_features
+                    model_state.classifier[3] = nn.Sequential(
+                        nn.Linear(in_features, 128),
+                        nn.ReLU(),
+                        nn.Dropout(p=0.2),
+                        nn.Linear(128, 4)
+                    )
                 
             model_state.load_state_dict(state_dict)
             model_state.eval()
@@ -501,8 +562,8 @@ def initialize_pytorch_lazy():
     except Exception as e:
         print(f"[WARNING] PyTorch or required libraries not fully installed. Running in mock AI mode: {e}")
 
-# Preprocessing & Inference function
-def predict_injury_swelling(image_url: str) -> str:
+# Preprocessing & Inference function supporting Siamese Dual-Input
+def predict_injury_swelling(image_url: str, comparison_image_url: str = None) -> str:
     # Trigger lazy initialization on demand
     initialize_pytorch_lazy()
     
@@ -523,13 +584,31 @@ def predict_injury_swelling(image_url: str) -> str:
         ])
         tensor = transform(image).unsqueeze(0)
         
+        is_siamese_model = SiameseAsymmetryNet is not None and isinstance(model_state, SiameseAsymmetryNet)
+        
         with torch_module.no_grad():
-            outputs = model_state(tensor)
+            if is_siamese_model:
+                # Preprocess healthy comparison image
+                if comparison_image_url:
+                    try:
+                        response_h = requests_module.get(comparison_image_url, timeout=5)
+                        image_h = Image_module.open(io_module.BytesIO(response_h.content)).convert('RGB')
+                        tensor_h = transform(image_h).unsqueeze(0)
+                    except Exception as ex:
+                        print(f"[AI ERROR] Failed loading healthy comparison image {comparison_image_url}: {ex}. Falling back to single image copy.")
+                        tensor_h = tensor.clone()
+                else:
+                    tensor_h = tensor.clone()
+                
+                outputs = model_state(tensor, tensor_h)
+            else:
+                outputs = model_state(tensor)
+                
             _, predicted = torch_module.max(outputs, 1)
             class_idx = predicted.item()
             
         classes = ["none", "mild", "moderate", "severe"]
-        print(f"[AI INFERENCE] PyTorch CNN swelling prediction: {classes[class_idx]} for image {image_url}")
+        print(f"[AI INFERENCE] PyTorch CNN swelling prediction: {classes[class_idx]} for image {image_url} (Siamese: {is_siamese_model})")
         return classes[class_idx]
     except Exception as e:
         print(f"[AI ERROR] Failed running PyTorch live inference: {e}. Falling back to default.")
@@ -559,24 +638,25 @@ def verify_joint_image(image_url: str, selected_area: str) -> tuple[bool, str]:
     # Extract alphanumeric tokens from the filename to prevent substring collisions (like 'carpal' matching 'car')
     # If it is a data URI, there is no filename. Skip keyword checking to avoid matching patterns in base64 string.
     tokens = []
+    selected_area_lower = selected_area.lower()
     if not image_url.startswith("data:image"):
         import re
         filename = image_url.split('/')[-1].split('?')[0].lower()
         tokens = re.split(r'[^a-z0-9]+', filename)
         
-        invalid_keywords = ["flower", "cat", "dog", "car", "face", "banana", "apple", "scenery", "table", "chair", "random"]
+        invalid_keywords = ["flower", "cat", "dog", "car", "face", "banana", "apple", "scenery", "table", "chair", "random", "shoe", "sneaker", "boot", "sandal", "slipper", "prescription", "paper", "document", "writing", "book", "website", "screen", "clog", "loafer"]
         for kw in invalid_keywords:
             if kw in tokens:
                 return False, f"Selected area is '{selected_area.capitalize()}', but the image appears to be a '{kw}'."
                 
-        # Explicit joint mismatch keywords check for mock checks
-        selected_area_lower = selected_area.lower()
-        if selected_area_lower == "knee" and any(k in tokens for k in ["foot", "feet", "shoe", "sock", "sandal", "slipper", "clog", "boot", "toe", "toes", "hand", "finger", "glove", "mitten", "wrist", "elbow", "arm"]):
-            return False, f"Selected area is 'Knee', but the image contains lower limb/extremity details (foot/hand/shoe)."
-        elif selected_area_lower in ["ankle", "foot"] and any(k in tokens for k in ["hand", "finger", "glove", "mitten", "wrist", "elbow", "arm", "knee", "thigh"]):
-            return False, f"Selected area is '{selected_area.capitalize()}', but the image appears to contain upper limb or knee details."
-        elif selected_area_lower in ["wrist", "elbow"] and any(k in tokens for k in ["foot", "feet", "shoe", "sock", "sandal", "slipper", "clog", "boot", "toe", "toes", "knee", "thigh", "kneepad", "leg"]):
-            return False, f"Selected area is '{selected_area.capitalize()}', but the image appears to contain lower body details."
+        # Relax explicit joint mismatch filename checks to avoid false positives on composite names
+        if len(tokens) <= 3:
+            if selected_area_lower == "knee" and any(k == t for k in ["foot", "shoe", "hand", "wrist", "elbow"] for t in tokens):
+                return False, f"Selected area is 'Knee', but the filename suggests a different body part."
+            elif selected_area_lower in ["ankle", "foot"] and any(k == t for k in ["hand", "wrist", "elbow", "knee"] for t in tokens):
+                return False, f"Selected area is '{selected_area.capitalize()}', but the filename suggests a different body part."
+            elif selected_area_lower in ["wrist", "elbow"] and any(k == t for k in ["foot", "shoe", "knee", "leg"] for t in tokens):
+                return False, f"Selected area is '{selected_area.capitalize()}', but the filename suggests a different body part."
 
     # Load PIL Image from base64, remote URL, or local file path
     pil_img = None
@@ -608,7 +688,7 @@ def verify_joint_image(image_url: str, selected_area: str) -> tuple[bool, str]:
         try:
             skin_pct = check_skin_tone_percentage(pil_img)
             print(f"[AI VALIDATION] Skin tone pixel percentage: {skin_pct:.2f}%")
-            if skin_pct < 12.0:
+            if skin_pct < 3.0: # Lowered threshold to avoid false rejections in low light/shadow/bandages
                 print(f"[AI VALIDATION REJECTION] Rejected due to low skin pixel percentage: {skin_pct:.2f}%")
                 return False, f"Selected injury area is '{selected_area.capitalize()}', but the photo does not appear to contain a close-up of a human joint or skin (detected skin area: {skin_pct:.1f}%). Please upload a clear photo of the selected body part."
         except Exception as ex:
@@ -641,8 +721,8 @@ def verify_joint_image(image_url: str, selected_area: str) -> tuple[bool, str]:
         
         # Define keywords mapping for each selected area
         area_keywords = {
-            "ankle": ["leg", "foot", "shoe", "sock", "sandal", "slipper", "footwear", "bandage", "band-aid", "adhesive", "plaster", "clog", "stocking", "ankle", "joint", "skin"],
-            "foot": ["leg", "foot", "shoe", "sock", "sandal", "slipper", "footwear", "bandage", "band-aid", "adhesive", "plaster", "clog", "stocking", "foot", "joint", "skin"],
+            "ankle": ["leg", "foot", "sock", "bandage", "band-aid", "adhesive", "plaster", "stocking", "ankle", "joint", "skin"],
+            "foot": ["leg", "foot", "sock", "bandage", "band-aid", "adhesive", "plaster", "stocking", "foot", "joint", "skin"],
             "knee": ["knee", "thigh", "kneepad", "bandage", "band-aid", "adhesive", "plaster", "joint", "skin", "pants", "shorts", "leg"],
             "wrist": ["hand", "finger", "wrist", "arm", "glove", "mitten", "bandage", "band-aid", "adhesive", "plaster", "wrist", "joint", "skin", "nail"],
             "elbow": ["arm", "elbow", "joint", "bandage", "band-aid", "adhesive", "plaster", "sleeve", "skin"]
@@ -657,15 +737,17 @@ def verify_joint_image(image_url: str, selected_area: str) -> tuple[bool, str]:
             "elbow": ["foot", "feet", "shoe", "sock", "sandal", "slipper", "clog", "boot", "toe", "toes", "knee", "thigh", "kneepad", "leg", "hand", "finger", "wrist"]
         }
         
-        # Check exclusions first
+        # Check exclusions first (lenient check - only if confidence is very high for wrong part)
         exclusions = area_exclusions.get(selected_area_lower, [])
-        for label in top5_labels:
+        for i, label in enumerate(top5_labels):
+            prob = top5_prob[i].item()
             for ex in exclusions:
-                if ex in label:
-                    print(f"[AI VALIDATION REJECTION] Rejected due to exclusion match '{ex}' in label '{label}' for area '{selected_area}'")
+                if ex in label and prob > 0.75: # Only reject if high confidence mismatch
+                    print(f"[AI VALIDATION REJECTION] Rejected due to high confidence exclusion match '{ex}' in label '{label}' ({prob:.2f}) for area '{selected_area}'")
                     return False, f"Selected injury area is '{selected_area.capitalize()}', but the photo looks like it contains a '{ex}' (mismatched body part). Please upload a clear photo focusing only on the {selected_area}."
                     
-        target_keywords = area_keywords.get(selected_area_lower, ["leg", "foot", "hand", "arm", "knee", "wrist", "elbow", "skin", "bandage"])
+        # Relax target keywords to include general body/skin/apparel fallback categories
+        target_keywords = area_keywords.get(selected_area_lower, ["leg", "foot", "hand", "arm", "knee", "wrist", "elbow", "skin", "bandage"]) + ["skin", "joint", "limb", "body", "muscle", "flesh", "bandage", "band-aid", "plaster", "dressing", "garter", "sarong", "pajamas", "shorts", "swimsuit", "jean", "trouser", "apparel"]
         
         is_valid = False
         matching_labels = []
@@ -676,10 +758,11 @@ def verify_joint_image(image_url: str, selected_area: str) -> tuple[bool, str]:
                     matching_labels.append(label)
                     break
                     
-        # Check for unrelated high-confidence prediction
+        # Check for unrelated high-confidence prediction (like food, animals, flowers)
         top1_label = top5_labels[0]
         top1_prob = top5_prob[0].item()
         
+        invalid_keywords = ["flower", "cat", "dog", "car", "truck", "scenery", "sunset", "food", "pizza", "burger", "coffee", "cup", "laptop", "keyboard", "code", "random", "tree", "bird", "shoe", "sneaker", "boot", "sandal", "slipper", "prescription", "paper", "document", "text", "writing", "book", "binder", "website", "screen", "computer", "clog", "loafer"]
         for ukw in invalid_keywords:
             if ukw in top1_label and top1_prob > 0.4:
                 print(f"[AI VALIDATION REJECTION] Rejected due to high confidence unrelated top-1 prediction: {top1_label} ({top1_prob:.2f})")
@@ -909,7 +992,7 @@ async def create_assessment(request: AssessmentRequest):
                 print(f"[AI VALIDATION REJECTED] Image validation failed: {validation_msg}")
                 raise HTTPException(status_code=400, detail=validation_msg)
                 
-            ai_predicted_swelling = predict_injury_swelling(request.imageUrl)
+            ai_predicted_swelling = predict_injury_swelling(request.imageUrl, request.comparisonImageUrl)
             # Update symptoms swelling value dynamically so that scoring rules factor it!
             request.symptoms.swelling = ai_predicted_swelling
             print(f"[AI PIPELINE] Merged AI Swelling Detection '{ai_predicted_swelling}' into triage assessment.")
